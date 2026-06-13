@@ -942,6 +942,41 @@
   </div>
 </div>
 
+<!-- Modal: Edit Progress Entry -->
+<div class="modal-overlay" id="modal-edit-progress">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <h3>✏️ Editar Atualização</h3>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal('modal-edit-progress')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-warn">⏱️ Edição permitida por até 30 minutos após o registro.</div>
+      <input type="hidden" id="ep-task-id">
+      <input type="hidden" id="ep-entry-index">
+      <div class="form-group">
+        <label>Percentual de Conclusão</label>
+        <div style="display:flex;align-items:center;gap:12px">
+          <input type="range" id="ep-pct" min="0" max="100" value="0"
+            oninput="document.getElementById('ep-pct-val').textContent=this.value+'%'">
+          <span id="ep-pct-val" style="min-width:40px;font-size:18px;font-weight:700;color:var(--gold)">0%</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Horas Trabalhadas</label>
+        <input type="number" id="ep-hours" min="0" step="0.5">
+      </div>
+      <div class="form-group">
+        <label>Descrição do que foi realizado *</label>
+        <textarea id="ep-note"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-edit-progress')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveEditProgress()">💾 Salvar Edição</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: Reassign Task -->
 <div class="modal-overlay" id="modal-reassign">
   <div class="modal" style="max-width:460px">
@@ -1133,6 +1168,7 @@ function importBackup(event) {
 }
 
 function checkBackupReminder() {
+  if (!isAdmin()) return; // backup só para admin
   const last   = parseInt(localStorage.getItem(BACKUP_TS_KEY) || '0');
   const snoozd = parseInt(localStorage.getItem('tstDiary_backupSnooze') || '0');
   const now_   = Date.now();
@@ -1601,7 +1637,7 @@ function renderPage(name) {
   if (name==='history')      renderHistoryPage();
   if (name==='reports')      renderReports();
   if (name==='users')        { if(!isAdmin()){showPage('dashboard');return;} renderUsers(); }
-  if (name==='reports')      { if(!isAdmin()){showPage('dashboard');return;} renderReports(); return; }
+  if (name==='reports')      { if(!isAdmin()){showPage('dashboard'); toast('Acesso restrito ao administrador.','🔒'); return;} renderReports(); return; }
 }
 
 // ═══════════════════════════════════════════
@@ -1656,14 +1692,16 @@ function fillTasksByTech2() {
 }
 function fillTasksFor(techId, taskSel, pctSel, pctVal) {
   const db = getDB();
-  const sel = document.getElementById(taskSel);
-  if (!sel) return;
+  const oldSel = document.getElementById(taskSel);
+  if (!oldSel) return;
+  // Clona o elemento para remover todos os event listeners acumulados
+  const sel = oldSel.cloneNode(false);
+  oldSel.parentNode.replaceChild(sel, oldSel);
   const tasks = db.tasks.filter(t=>!techId||t.technicianId===techId);
   sel.innerHTML = tasks.map(t=>`<option value="${t.id}">${t.title} (${t.progress}%)</option>`).join('');
   if (tasks.length > 0) {
-    const task = tasks[0];
-    document.getElementById(pctSel).value = task.progress;
-    document.getElementById(pctVal).textContent = task.progress + '%';
+    document.getElementById(pctSel).value = tasks[0].progress;
+    document.getElementById(pctVal).textContent = tasks[0].progress + '%';
   }
   sel.addEventListener('change', function() {
     const t = db.tasks.find(x=>x.id===this.value);
@@ -1731,7 +1769,8 @@ function doUpdateProgress(taskId, pct, note, hoursWorked, date, status) {
   task.progress = pct;
   task.status = status || (pct===100 ? 'concluido' : pct>0 ? 'em_andamento' : 'nao_iniciado');
   task.realizedHours = (task.realizedHours||0) + (parseFloat(hoursWorked)||0);
-  task.progressLog.push({ date: date ? new Date(date).toISOString() : now(), pct, note, hoursWorked: parseFloat(hoursWorked)||0 });
+  // Usar T12:00:00 evita que datas sem hora sejam lidas como meia-noite UTC (21h no Brasil)
+  task.progressLog.push({ date: date ? new Date(date + 'T12:00:00').toISOString() : now(), pct, note, hoursWorked: parseFloat(hoursWorked)||0 });
 
   db.auditLog.push({
     id: uid(), type:'progress', timestamp: now(),
@@ -2060,16 +2099,25 @@ function viewTask(taskId) {
     </div>
     ${t.description?`<div style="background:var(--navy3);border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;color:var(--text2)">${t.description}</div>`:''}
     <div class="card-title" style="margin-bottom:12px">📜 Histórico de Progresso</div>
-    ${t.progressLog.length ? t.progressLog.slice().reverse().map(p=>`
-      <div class="log-item">
+    ${t.progressLog.length ? t.progressLog.slice().reverse().map((p,ri)=>{
+      const realIdx = t.progressLog.length - 1 - ri;
+      const session_ = getSession();
+      const ageMin = (Date.now() - new Date(p.date).getTime()) / 60000;
+      const canEdit = ageMin <= 30 && (
+        session_.role === 'admin' || session_.technicianId === t.technicianId
+      );
+      return `<div class="log-item">
         <div class="log-dot" style="background:${pctColor(p.pct)}"></div>
         <div class="log-content">
-          <div class="log-title" style="color:${pctColor(p.pct)}">${p.pct}% concluído</div>
+          <div class="log-title" style="color:${pctColor(p.pct)};display:flex;justify-content:space-between;align-items:center">
+            <span>${p.pct}% concluído</span>
+            ${canEdit ? `<button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px" onclick="openEditProgress('${t.id}',${realIdx})">✏️ Editar</button>` : ''}
+          </div>
           <div class="log-meta">${fmtDate(p.date)} · ${p.hoursWorked}h trabalhadas nesta sessão</div>
           <div class="log-detail">${p.note}</div>
         </div>
-      </div>
-    `).join('') : '<p style="color:var(--text2);font-size:13px">Nenhum progresso registrado ainda.</p>'}
+      </div>`;
+    }).join('') : '<p style="color:var(--text2);font-size:13px">Nenhum progresso registrado ainda.</p>'}
   `;
   openModal('modal-task-detail');
 }
@@ -2171,6 +2219,54 @@ function suggestPriority() {
   sel.value           = suggested;
   hint.textContent    = `💡 Sugestão automática: ${label}`;
   hint.style.display  = 'block';
+}
+
+function openEditProgress(taskId, entryIndex) {
+  const db   = getDB();
+  const task = db.tasks.find(t => t.id === taskId);
+  if (!task) return;
+  const entry = task.progressLog[entryIndex];
+  if (!entry) return;
+  const ageMin = (Date.now() - new Date(entry.date).getTime()) / 60000;
+  if (ageMin > 30) { toast('Prazo de edição de 30 minutos expirado.', '⏱️'); return; }
+  document.getElementById('ep-task-id').value    = taskId;
+  document.getElementById('ep-entry-index').value = entryIndex;
+  document.getElementById('ep-pct').value          = entry.pct;
+  document.getElementById('ep-pct-val').textContent = entry.pct + '%';
+  document.getElementById('ep-hours').value        = entry.hoursWorked;
+  document.getElementById('ep-note').value         = entry.note;
+  openModal('modal-edit-progress');
+}
+
+function saveEditProgress() {
+  const taskId = document.getElementById('ep-task-id').value;
+  const idx    = parseInt(document.getElementById('ep-entry-index').value);
+  const note   = document.getElementById('ep-note').value.trim();
+  if (!note) { toast('Descreva o que foi realizado!', '⚠️'); return; }
+  const db   = getDB();
+  const task = db.tasks.find(t => t.id === taskId);
+  if (!task || !task.progressLog[idx]) return;
+  const ageMin = (Date.now() - new Date(task.progressLog[idx].date).getTime()) / 60000;
+  if (ageMin > 30) { toast('Prazo de edição de 30 minutos expirado.', '⏱️'); closeModal('modal-edit-progress'); return; }
+  const oldEntry = { ...task.progressLog[idx] };
+  task.progressLog[idx].pct         = parseInt(document.getElementById('ep-pct').value);
+  task.progressLog[idx].hoursWorked = parseFloat(document.getElementById('ep-hours').value) || 0;
+  task.progressLog[idx].note        = note;
+  task.progressLog[idx].editedAt    = now();
+  // Recalcula horas realizadas totais
+  task.realizedHours = task.progressLog.reduce((a, p) => a + (p.hoursWorked || 0), 0);
+  // Atualiza progresso geral com o último valor
+  task.progress = task.progressLog[task.progressLog.length - 1].pct;
+  db.auditLog.push({
+    id: uid(), type: 'progress_edited', timestamp: now(),
+    taskId: task.id, taskTitle: task.title, technicianId: task.technicianId,
+    data: { prev: oldEntry, next: task.progressLog[idx] }
+  });
+  saveDB(db);
+  closeModal('modal-edit-progress');
+  closeModal('modal-task-detail');
+  toast('Atualização editada com sucesso!');
+  renderTasksPage();
 }
 
 function openReassign(taskId) {
