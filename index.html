@@ -1,0 +1,2897 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TST Diary — Gestão de Segurança do Trabalho</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --navy:    #0f1c2e;
+    --navy2:   #162032;
+    --navy3:   #1e2d42;
+    --navy4:   #243450;
+    --gold:    #f5a623;
+    --gold2:   #fbbf24;
+    --cyan:    #22d3ee;
+    --green:   #10b981;
+    --red:     #ef4444;
+    --orange:  #f97316;
+    --purple:  #8b5cf6;
+    --text:    #e2e8f0;
+    --text2:   #94a3b8;
+    --border:  #2a3f5a;
+    --card:    #162032;
+    --input:   #1e2d42;
+    --radius:  10px;
+    --shadow:  0 4px 24px rgba(0,0,0,0.4);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--navy); color: var(--text); min-height: 100vh; display: flex; }
+
+  /* ── SIDEBAR ── */
+  #sidebar {
+    width: 240px; min-height: 100vh; background: var(--navy2);
+    border-right: 1px solid var(--border); display: flex; flex-direction: column;
+    position: fixed; top: 0; left: 0; z-index: 100;
+  }
+  .sidebar-logo {
+    padding: 24px 20px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .sidebar-logo .logo-icon {
+    width: 42px; height: 42px; background: linear-gradient(135deg, var(--gold), var(--orange));
+    border-radius: 10px; display: flex; align-items: center; justify-content: center;
+    font-size: 20px; margin-bottom: 10px; box-shadow: 0 2px 12px rgba(245,166,35,0.35);
+  }
+  .sidebar-logo h1 { font-size: 15px; font-weight: 700; color: var(--text); letter-spacing: 0.5px; }
+  .sidebar-logo p  { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+  .nav-section { padding: 16px 12px 4px; font-size: 10px; font-weight: 700;
+    color: var(--text2); letter-spacing: 1.5px; text-transform: uppercase; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+    border-radius: 8px; margin: 2px 8px; cursor: pointer; font-size: 13px;
+    color: var(--text2); transition: all 0.2s; user-select: none;
+  }
+  .nav-item:hover { background: var(--navy3); color: var(--text); }
+  .nav-item.active { background: linear-gradient(135deg,rgba(245,166,35,0.18),rgba(245,166,35,0.08));
+    color: var(--gold); border-left: 3px solid var(--gold); padding-left: 11px; }
+  .nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+
+  .sidebar-footer { margin-top: auto; padding: 16px; border-top: 1px solid var(--border);
+    font-size: 11px; color: var(--text2); text-align: center; }
+
+  /* ── BACKUP BANNER ── */
+  #backup-banner {
+    position: fixed; bottom: 24px; left: 260px; right: 24px; z-index: 300;
+    background: linear-gradient(135deg,#1a2f1a,#162032);
+    border: 1px solid var(--green); border-radius: 12px;
+    padding: 14px 20px; display: flex; align-items: center; gap: 14px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5); display: none;
+  }
+  #backup-banner .bb-icon { font-size: 24px; flex-shrink: 0; }
+  #backup-banner .bb-text { flex: 1; font-size: 13px; }
+  #backup-banner .bb-text strong { color: var(--green); }
+
+  /* ── MAIN ── */
+  #main { margin-left: 240px; flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
+
+  .topbar {
+    height: 60px; background: var(--navy2); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 28px; position: sticky; top: 0; z-index: 50;
+  }
+  .topbar h2 { font-size: 16px; font-weight: 600; }
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+  .badge-date { background: var(--navy3); border: 1px solid var(--border); padding: 5px 12px;
+    border-radius: 20px; font-size: 12px; color: var(--text2); }
+
+  .content { padding: 28px; flex: 1; }
+
+  /* ── PAGES ── */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px; box-shadow: var(--shadow);
+  }
+  .card-title { font-size: 13px; font-weight: 600; color: var(--text2); text-transform: uppercase;
+    letter-spacing: 0.8px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+  /* ── KPI ROW ── */
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+  .kpi-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px; position: relative; overflow: hidden;
+  }
+  .kpi-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: var(--accent, var(--gold));
+  }
+  .kpi-card .kpi-icon { font-size: 28px; margin-bottom: 10px; }
+  .kpi-card .kpi-value { font-size: 32px; font-weight: 700; color: var(--text); line-height: 1; }
+  .kpi-card .kpi-label { font-size: 12px; color: var(--text2); margin-top: 6px; }
+  .kpi-card .kpi-sub { font-size: 11px; color: var(--text2); margin-top: 4px; }
+
+  /* ── GRID LAYOUTS ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .mt { margin-top: 20px; }
+
+  /* ── PROGRESS BAR ── */
+  .progress-wrap { background: var(--navy3); border-radius: 99px; height: 8px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 99px; transition: width 0.4s ease; }
+  .prog-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--text2); margin-bottom: 5px; }
+
+  /* ── TASK TABLE ── */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th { background: var(--navy3); color: var(--text2); font-weight: 600; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.6px; padding: 10px 14px; text-align: left;
+    border-bottom: 1px solid var(--border); white-space: nowrap; }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+  tbody tr:hover { background: rgba(255,255,255,0.03); }
+  tbody td { padding: 12px 14px; vertical-align: middle; }
+
+  /* ── STATUS BADGES ── */
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 600;
+  }
+  .badge-green  { background: rgba(16,185,129,0.15); color: var(--green); }
+  .badge-gold   { background: rgba(245,166,35,0.15);  color: var(--gold);  }
+  .badge-red    { background: rgba(239,68,68,0.15);   color: var(--red);   }
+  .badge-blue   { background: rgba(34,211,238,0.15);  color: var(--cyan);  }
+  .badge-purple { background: rgba(139,92,246,0.15);  color: var(--purple);}
+  .badge-orange { background: rgba(249,115,22,0.15);  color: var(--orange);}
+
+  /* ── BUTTONS ── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px;
+    border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer;
+    border: none; transition: all 0.2s; text-decoration: none;
+  }
+  .btn-primary { background: linear-gradient(135deg, var(--gold), var(--orange)); color: #0f1c2e; }
+  .btn-primary:hover { opacity: 0.88; transform: translateY(-1px); }
+  .btn-ghost { background: var(--navy3); color: var(--text); border: 1px solid var(--border); }
+  .btn-ghost:hover { background: var(--navy4); }
+  .btn-danger { background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+  .btn-danger:hover { background: rgba(239,68,68,0.25); }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .btn-icon { padding: 6px; width: 32px; height: 32px; justify-content: center; border-radius: 7px; }
+
+  /* ── FORMS ── */
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+  .form-group label { font-size: 12px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; }
+  .form-group input, .form-group select, .form-group textarea {
+    background: var(--input); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); padding: 10px 12px; font-size: 13px; outline: none; font-family: inherit;
+    transition: border-color 0.2s;
+  }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+    border-color: var(--gold); box-shadow: 0 0 0 3px rgba(245,166,35,0.1);
+  }
+  .form-group textarea { resize: vertical; min-height: 80px; }
+  .form-group select option { background: var(--navy3); }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+    opacity: 0; pointer-events: none; transition: opacity 0.2s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--navy2); border: 1px solid var(--border); border-radius: 14px;
+    width: 100%; max-width: 640px; max-height: 90vh; overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6); transform: translateY(20px); transition: transform 0.2s;
+  }
+  .modal-overlay.open .modal { transform: translateY(0); }
+  .modal-header {
+    padding: 20px 24px; border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .modal-header h3 { font-size: 16px; font-weight: 700; }
+  .modal-body { padding: 24px; }
+  .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border);
+    display: flex; justify-content: flex-end; gap: 10px; }
+
+  /* ── HISTORY LOG ── */
+  .log-item {
+    display: flex; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--border);
+  }
+  .log-item:last-child { border-bottom: none; }
+  .log-dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+  .log-content { flex: 1; }
+  .log-content .log-title { font-size: 13px; font-weight: 600; }
+  .log-content .log-meta  { font-size: 11px; color: var(--text2); margin-top: 3px; }
+  .log-content .log-detail { font-size: 12px; color: var(--text2); margin-top: 5px;
+    background: var(--navy3); border-radius: 6px; padding: 6px 10px; }
+
+  /* ── CHART CONTAINER ── */
+  .chart-box { position: relative; height: 220px; }
+
+  /* ── TECH CARD ── */
+  .tech-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px; display: flex; flex-direction: column; gap: 14px;
+  }
+  .tech-avatar {
+    width: 48px; height: 48px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--gold), var(--orange));
+    display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; color: #0f1c2e;
+  }
+  .tech-info h4 { font-size: 15px; font-weight: 700; }
+  .tech-info p  { font-size: 12px; color: var(--text2); }
+
+  /* ── SECTION HEADER ── */
+  .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .section-header h3 { font-size: 18px; font-weight: 700; }
+  .section-header p  { font-size: 13px; color: var(--text2); margin-top: 2px; }
+
+  /* ── TABS ── */
+  .tabs { display: flex; gap: 4px; background: var(--navy3); padding: 4px; border-radius: 10px; margin-bottom: 20px; width: fit-content; }
+  .tab { padding: 7px 16px; border-radius: 7px; font-size: 13px; font-weight: 600;
+    cursor: pointer; color: var(--text2); transition: all 0.2s; }
+  .tab.active { background: var(--navy2); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+
+  /* ── PERIOD FILTER ── */
+  .filter-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
+  .filter-bar select, .filter-bar input { background: var(--input); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); padding: 8px 12px; font-size: 13px; outline: none; }
+
+  /* ── PERCENT CIRCLE ── */
+  .pct-circle { position: relative; width: 70px; height: 70px; flex-shrink: 0; }
+  .pct-circle svg { transform: rotate(-90deg); }
+  .pct-circle .pct-text { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--navy4); border-radius: 99px; }
+
+  /* ── ALERT ── */
+  .alert { padding: 12px 16px; border-radius: 8px; font-size: 13px; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 10px; }
+  .alert-info { background: rgba(34,211,238,0.1); border: 1px solid rgba(34,211,238,0.3); color: var(--cyan); }
+  .alert-warn { background: rgba(245,166,35,0.1); border: 1px solid rgba(245,166,35,0.3); color: var(--gold); }
+
+  /* ── EMPTY STATE ── */
+  .empty { text-align: center; padding: 48px 20px; color: var(--text2); }
+  .empty .empty-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty p { font-size: 14px; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 1100px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+
+  /* ── MOBILE (≤ 768px) ── */
+  @media (max-width: 768px) {
+    #sidebar {
+      transform: translateX(-100%);
+      transition: transform 0.28s cubic-bezier(.4,0,.2,1);
+      z-index: 500; width: 260px; box-shadow: 4px 0 24px rgba(0,0,0,0.5);
+    }
+    #sidebar.mobile-open { transform: translateX(0); }
+    #sidebar-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+      z-index: 499; backdrop-filter: blur(2px);
+    }
+    #sidebar-overlay.visible { display: block; }
+
+    #main { margin-left: 0; }
+
+    .topbar { padding: 0 14px; gap: 8px; }
+    .topbar h2 { font-size: 14px; flex: 1; }
+    #top-date { display: none; }
+    #sync-indicator { font-size: 10px; padding: 3px 7px; }
+    .topbar-right { gap: 6px; }
+    #topbar-username { display: none; }
+    .topbar-right .btn-primary { font-size: 11px; padding: 6px 10px; }
+    #btn-hamburger { display: flex; }
+
+    .content { padding: 14px; }
+
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 14px; }
+    .kpi-card { padding: 14px; }
+    .kpi-card .kpi-icon { font-size: 20px; margin-bottom: 6px; }
+    .kpi-card .kpi-value { font-size: 24px; }
+
+    .grid-2, .grid-3 { grid-template-columns: 1fr; gap: 12px; }
+    .mt { margin-top: 12px; }
+
+    .form-row, .form-row-3 { grid-template-columns: 1fr; gap: 10px; }
+
+    .modal { max-width: 100% !important; max-height: 95vh; border-radius: 16px 16px 0 0; }
+    .modal-overlay { align-items: flex-end; padding: 0; }
+    .modal-overlay.open .modal { transform: translateY(0); }
+
+    .section-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .section-header div:last-child { width: 100%; display: flex; gap: 8px; }
+    .section-header .btn { flex: 1; justify-content: center; }
+
+    .filter-bar { gap: 8px; }
+    .filter-bar select, .filter-bar input { font-size: 12px; padding: 7px 8px; }
+
+    table { font-size: 12px; }
+    thead th { padding: 8px 10px; font-size: 10px; }
+    tbody td { padding: 8px 10px; }
+
+    .tabs { width: 100%; }
+    .tab { flex: 1; text-align: center; font-size: 12px; padding: 7px 8px; }
+
+    #tech-cards-grid { grid-template-columns: 1fr !important; }
+
+    .card { padding: 14px; }
+    .card-title { font-size: 12px; }
+
+    /* Bottom nav para mobile */
+    #mobile-bottom-nav {
+      display: flex; position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--navy2); border-top: 1px solid var(--border);
+      z-index: 400; padding: 6px 0 10px;
+    }
+    .mbn-item {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      gap: 3px; cursor: pointer; padding: 4px 0; color: var(--text2);
+      font-size: 10px; font-weight: 600; transition: color 0.2s;
+    }
+    .mbn-item .mbn-icon { font-size: 20px; }
+    .mbn-item.active { color: var(--gold); }
+    #main { padding-bottom: 70px; }
+  }
+
+  @media (min-width: 769px) {
+    #btn-hamburger { display: none !important; }
+    #mobile-bottom-nav { display: none !important; }
+    #sidebar-overlay { display: none !important; }
+  }
+
+  .divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+  .tag { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 5px;
+    font-size: 11px; font-weight: 600; background: var(--navy3); color: var(--text2); }
+
+  .hours-bar-wrap { margin-top: 8px; }
+  .hours-bar-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--text2); margin-bottom: 4px; }
+
+  input[type=range] { -webkit-appearance: none; width: 100%; height: 6px; border-radius: 99px;
+    background: var(--navy3); outline: none; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px;
+    border-radius: 50%; background: var(--gold); cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.3); }
+
+  /* ── LOGIN SCREEN ── */
+  #login-screen {
+    position: fixed; inset: 0; background: var(--navy);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000; padding: 20px;
+  }
+  #login-screen.hidden { display: none; }
+  .login-box {
+    background: var(--navy2); border: 1px solid var(--border); border-radius: 16px;
+    padding: 40px 36px; width: 100%; max-width: 400px; box-shadow: 0 24px 64px rgba(0,0,0,0.6);
+  }
+  .login-logo { text-align: center; margin-bottom: 28px; }
+  .login-logo .logo-icon { width: 56px; height: 56px; background: linear-gradient(135deg,var(--gold),var(--orange));
+    border-radius: 14px; display: flex; align-items: center; justify-content: center;
+    font-size: 26px; margin: 0 auto 12px; box-shadow: 0 4px 20px rgba(245,166,35,0.4); }
+  .login-logo h1 { font-size: 22px; font-weight: 800; }
+  .login-logo p  { font-size: 13px; color: var(--text2); margin-top: 4px; }
+  .login-error { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3);
+    color: var(--red); border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 14px; display: none; }
+
+  /* ── ADMIN-ONLY elements ── */
+  .admin-only { display: none; }
+  body.is-admin .admin-only { display: flex; }
+  body.is-admin .admin-only-block { display: block; }
+  .admin-only-block { display: none; }
+  .role-badge { padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 700; }
+  .role-admin { background: rgba(245,166,35,0.2); color: var(--gold); }
+  .role-tecnico { background: rgba(34,211,238,0.15); color: var(--cyan); }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ LOGIN SCREEN ══════════════════ -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="logo-icon">🦺</div>
+      <h1>TST Diary</h1>
+      <p>Gestão de Segurança do Trabalho</p>
+    </div>
+    <div class="login-error" id="login-error">Usuário ou senha incorretos.</div>
+    <div class="form-group">
+      <label>Usuário</label>
+      <input type="text" id="login-user" placeholder="seu.usuario" autocomplete="username"
+        onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="form-group">
+      <label>Senha</label>
+      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password"
+        onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;padding:12px;font-size:14px;margin-top:8px" onclick="doLogin()">
+      Entrar →
+    </button>
+    <p style="text-align:center;font-size:11px;color:var(--text2);margin-top:20px">
+      Acesso restrito. Solicite suas credenciais ao administrador.
+    </p>
+  </div>
+</div>
+
+<!-- Overlay sidebar mobile -->
+<div id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+<!-- Navegação inferior mobile -->
+<div id="mobile-bottom-nav">
+  <div class="mbn-item active" onclick="showPage('dashboard');setMobileNav(this)">
+    <span class="mbn-icon">📊</span><span>Dashboard</span>
+  </div>
+  <div class="mbn-item" onclick="showPage('tasks');setMobileNav(this)">
+    <span class="mbn-icon">📋</span><span>Atividades</span>
+  </div>
+  <div class="mbn-item" onclick="showPage('productivity');setMobileNav(this)">
+    <span class="mbn-icon">📈</span><span>Produtiv.</span>
+  </div>
+  <div class="mbn-item" onclick="showPage('history');setMobileNav(this)">
+    <span class="mbn-icon">🕐</span><span>Histórico</span>
+  </div>
+  <div class="mbn-item" onclick="openModal('modal-quick-update')">
+    <span class="mbn-icon" style="background:linear-gradient(135deg,var(--gold),var(--orange));border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;margin-top:-14px;box-shadow:0 4px 12px rgba(245,166,35,0.5)">⚡</span>
+    <span>Atualizar</span>
+  </div>
+</div>
+
+<!-- ══════════════════ SIDEBAR ══════════════════ -->
+<nav id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">🦺</div>
+    <h1>TST Diary</h1>
+    <p>Gestão de Segurança</p>
+  </div>
+
+  <div class="nav-section">Principal</div>
+  <div class="nav-item active" onclick="showPage('dashboard')">
+    <span class="icon">📊</span><span>Dashboard</span>
+  </div>
+  <div class="nav-item" onclick="showPage('tasks')">
+    <span class="icon">📋</span><span>Atividades</span>
+  </div>
+  <div class="nav-item admin-only" onclick="showPage('technicians')" style="display:none">
+    <span class="icon">👷</span><span>Técnicos</span>
+  </div>
+
+  <div class="nav-section admin-only-block">Administração</div>
+  <div class="nav-item admin-only" onclick="showPage('users')" style="display:none">
+    <span class="icon">🔐</span><span>Usuários</span>
+  </div>
+
+  <div class="nav-section">Análise</div>
+  <div class="nav-item" onclick="showPage('productivity')">
+    <span class="icon">📈</span><span>Produtividade</span>
+  </div>
+  <div class="nav-item" onclick="showPage('history')">
+    <span class="icon">🕐</span><span>Histórico</span>
+  </div>
+  <div class="nav-item admin-only" onclick="showPage('reports')" style="display:none">
+    <span class="icon">📄</span><span>Relatórios</span>
+  </div>
+
+  <div class="sidebar-footer">
+    <div id="sidebar-backup-btns">
+      <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-bottom:6px;font-size:11px" onclick="exportBackup()">💾 Exportar Backup</button>
+      <label class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;font-size:11px;cursor:pointer">
+        📂 Importar Backup
+        <input type="file" id="import-file" accept=".json" style="display:none" onchange="importBackup(event)">
+      </label>
+    </div>
+    <div style="margin-top:8px">v1.0 · TST Diary</div>
+  </div>
+</nav>
+
+<!-- ══════════════════ MAIN ══════════════════ -->
+<main id="main">
+  <div class="topbar">
+    <button id="btn-hamburger" class="btn btn-ghost btn-icon" onclick="toggleSidebar()" style="display:none;flex-shrink:0">☰</button>
+    <h2 id="topbar-title">Dashboard</h2>
+    <div class="topbar-right">
+      <span class="badge-date" id="top-date"></span>
+      <span id="sync-indicator" style="font-size:11px;background:var(--navy3);border:1px solid var(--border);padding:4px 10px;border-radius:20px;display:flex;align-items:center;gap:4px">🟡 <span style="color:var(--gold)">Modo local</span></span>
+      <button class="btn btn-primary btn-sm" onclick="openModal('modal-quick-update')">⚡ Atualizar Atividade</button>
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:var(--navy3);border:1px solid var(--border);border-radius:20px">
+        <span style="font-size:13px" id="topbar-username">—</span>
+        <span id="topbar-role-badge" class="role-badge"></span>
+        <button class="btn btn-ghost btn-sm" style="padding:3px 8px;font-size:11px" onclick="doLogout()">Sair</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ══ PAGE: DASHBOARD ══ -->
+    <div class="page active" id="page-dashboard">
+      <div class="kpi-grid" id="kpi-grid"></div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">📊 Progresso por Atividade</div>
+          <div id="tasks-progress-list"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">👷 Carga de Trabalho por Técnico</div>
+          <div class="chart-box"><canvas id="chart-technicians"></canvas></div>
+        </div>
+      </div>
+      <div class="grid-2 mt">
+        <div class="card">
+          <div class="card-title">📅 Evolução Mensal</div>
+          <div class="chart-box"><canvas id="chart-monthly"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">📋 Status das Atividades</div>
+          <div class="chart-box"><canvas id="chart-status"></canvas></div>
+        </div>
+      </div>
+      <div class="card mt">
+        <div class="card-title">🕐 Últimas Atualizações</div>
+        <div id="recent-log"></div>
+      </div>
+    </div>
+
+    <!-- ══ PAGE: TASKS ══ -->
+    <div class="page" id="page-tasks">
+      <div class="section-header">
+        <div>
+          <h3>Atividades</h3>
+          <p>Gerencie todas as atividades da equipe de segurança</p>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-ghost" onclick="openModal('modal-add-task')">+ Nova Atividade</button>
+          <button class="btn btn-primary" onclick="openModal('modal-update-progress')">⚡ Registrar Progresso</button>
+        </div>
+      </div>
+
+      <div class="filter-bar">
+        <select id="filter-tech" onchange="renderTasksPage()">
+          <option value="">Todos os Técnicos</option>
+        </select>
+        <select id="filter-status" onchange="renderTasksPage()">
+          <option value="">Todos os Status</option>
+          <option value="nao_iniciado">Não Iniciado</option>
+          <option value="em_andamento">Em Andamento</option>
+          <option value="concluido">Concluído</option>
+          <option value="pausado">Pausado</option>
+        </select>
+        <select id="filter-cat" onchange="renderTasksPage()">
+          <option value="">Todas as Categorias</option>
+          <option value="Administrativo">Administrativo</option>
+          <option value="Campo">Campo</option>
+          <option value="Treinamento">Treinamento</option>
+          <option value="Projeto">Projeto</option>
+          <option value="Compras">Compras</option>
+          <option value="E-Social">E-Social</option>
+          <option value="NR">NR / Normas</option>
+        </select>
+        <input type="text" id="filter-search" placeholder="🔍 Buscar atividade..." onkeyup="renderTasksPage()" style="min-width:200px">
+      </div>
+
+      <div class="card">
+        <div class="table-wrap">
+          <table id="tasks-table">
+            <thead>
+              <tr>
+                <th>Atividade</th>
+                <th>Categoria</th>
+                <th>Técnico</th>
+                <th>Horas Est.</th>
+                <th>Horas Real.</th>
+                <th>Progresso</th>
+                <th>Status</th>
+                <th>Prazo</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="tasks-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ PAGE: TECHNICIANS ══ -->
+    <div class="page" id="page-technicians">
+      <div class="section-header">
+        <div><h3>Técnicos de Segurança</h3><p>Gerencie a equipe e a carga horária mensal</p></div>
+        <button class="btn btn-primary" onclick="openModal('modal-add-tech')">+ Novo Técnico</button>
+      </div>
+      <div id="tech-cards-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px"></div>
+
+      <div class="card mt">
+        <div class="card-title">⏱️ Horas Disponíveis por Mês</div>
+        <div class="alert alert-info">
+          ℹ️ Defina as horas disponíveis para cada técnico por mês. Isso determina a capacidade de trabalho e o percentual de ocupação.
+        </div>
+        <div id="hours-config-list"></div>
+      </div>
+    </div>
+
+    <!-- ══ PAGE: PRODUCTIVITY ══ -->
+    <div class="page" id="page-productivity">
+      <div class="section-header">
+        <div><h3>Produtividade</h3><p>Análise de desempenho diário, semanal e mensal</p></div>
+      </div>
+      <div class="tabs">
+        <div class="tab active" onclick="setProductTab('diario',this)">Diário</div>
+        <div class="tab" onclick="setProductTab('semanal',this)">Semanal</div>
+        <div class="tab" onclick="setProductTab('mensal',this)">Mensal</div>
+      </div>
+      <div id="productivity-content"></div>
+    </div>
+
+    <!-- ══ PAGE: HISTORY ══ -->
+    <div class="page" id="page-history">
+      <div class="section-header">
+        <div><h3>Histórico de Alterações</h3><p>Registro imutável de todas as atualizações</p></div>
+      </div>
+      <div class="alert alert-warn">🔒 Este histórico é somente leitura e não pode ser editado ou excluído.</div>
+      <div class="filter-bar">
+        <select id="hist-filter-tech" onchange="renderHistoryPage()">
+          <option value="">Todos os Técnicos</option>
+        </select>
+        <select id="hist-filter-type" onchange="renderHistoryPage()">
+          <option value="">Todos os Tipos</option>
+          <option value="progress">Progresso</option>
+          <option value="task_created">Tarefa Criada</option>
+          <option value="task_updated">Tarefa Atualizada</option>
+          <option value="tech_created">Técnico Cadastrado</option>
+          <option value="hours_updated">Horas Atualizadas</option>
+        </select>
+        <input type="date" id="hist-filter-date" onchange="renderHistoryPage()">
+      </div>
+      <div class="card">
+        <div id="history-list"></div>
+      </div>
+    </div>
+
+    <!-- ══ PAGE: USERS ══ -->
+    <div class="page" id="page-users">
+      <div class="section-header">
+        <div><h3>Usuários e Acessos</h3><p>Somente o administrador pode criar, editar ou excluir usuários</p></div>
+        <button class="btn btn-primary" onclick="openModal('modal-add-user')">+ Novo Usuário</button>
+      </div>
+      <div class="alert alert-warn">🔐 Os técnicos só conseguem visualizar e atualizar atividades. Apenas o Admin pode excluir atividades, gerenciar usuários e técnicos.</div>
+      <div class="card">
+        <div class="table-wrap">
+          <table id="users-table">
+            <thead><tr><th>Usuário</th><th>Nome</th><th>Papel</th><th>Técnico Vinculado</th><th>Criado em</th><th>Ações</th></tr></thead>
+            <tbody id="users-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ PAGE: REPORTS ══ -->
+    <div class="page" id="page-reports">
+      <div class="section-header">
+        <div><h3>Relatórios</h3><p>Exportação e resumos executivos</p></div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">📄 Relatório Executivo</div>
+          <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Gere um resumo completo para apresentação à diretoria.</p>
+          <div class="form-group">
+            <label>Período</label>
+            <select id="report-period">
+              <option value="mes_atual">Mês Atual</option>
+              <option value="trimestre">Trimestre</option>
+              <option value="semestre">Semestre</option>
+              <option value="anual">Anual</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Técnico</label>
+            <select id="report-tech">
+              <option value="">Toda a Equipe</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="generateReport()">📥 Gerar Relatório HTML</button>
+        </div>
+        <div class="card">
+          <div class="card-title">📊 Resumo Rápido</div>
+          <div id="quick-report-summary"></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</main>
+
+<!-- ══════════════════ MODALS ══════════════════ -->
+
+<!-- Modal: Add Task -->
+<div class="modal-overlay" id="modal-add-task">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>➕ Nova Atividade</h3>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal('modal-add-task')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Nome da Atividade *</label>
+          <input type="text" id="nt-title" placeholder="Ex.: Elaboração de PPP">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Categoria *</label>
+          <select id="nt-cat">
+            <option value="Administrativo">Administrativo</option>
+            <option value="Campo">Campo</option>
+            <option value="Treinamento">Treinamento</option>
+            <option value="Projeto">Projeto</option>
+            <option value="Compras">Compras</option>
+            <option value="E-Social">E-Social</option>
+            <option value="NR">NR / Normas</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Técnico Responsável *</label>
+          <select id="nt-tech"></select>
+        </div>
+      </div>
+      <div class="form-row-3">
+        <div class="form-group">
+          <label>Horas Estimadas *</label>
+          <input type="number" id="nt-hours" placeholder="Ex.: 8" min="0.5" step="0.5">
+        </div>
+        <div class="form-group">
+          <label>Prazo</label>
+          <input type="date" id="nt-deadline" onchange="suggestPriority()">
+        </div>
+        <div class="form-group">
+          <label>Prioridade</label>
+          <select id="nt-priority">
+            <option value="baixa">🟢 Baixa</option>
+            <option value="media" selected>🟡 Média</option>
+            <option value="alta">🔴 Alta</option>
+          </select>
+          <span id="nt-priority-hint" style="font-size:11px;color:var(--text2);margin-top:4px;display:none"></span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Descrição / Observações</label>
+        <textarea id="nt-desc" placeholder="Detalhes da atividade..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Progresso Inicial (%)</label>
+        <div style="display:flex;align-items:center;gap:12px">
+          <input type="range" id="nt-progress" min="0" max="100" value="0" oninput="document.getElementById('nt-progress-val').textContent=this.value+'%'">
+          <span id="nt-progress-val" style="min-width:36px;font-weight:700;color:var(--gold)">0%</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-add-task')">Cancelar</button>
+      <button class="btn btn-primary" onclick="addTask()">✅ Cadastrar Atividade</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Update Progress -->
+<div class="modal-overlay" id="modal-update-progress">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>⚡ Registrar Progresso</h3>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal('modal-update-progress')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Técnico *</label>
+          <select id="up-tech" onchange="fillTasksByTech()"></select>
+        </div>
+        <div class="form-group">
+          <label>Atividade *</label>
+          <select id="up-task"></select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Novo Percentual de Conclusão *</label>
+        <div style="display:flex;align-items:center;gap:12px">
+          <input type="range" id="up-pct" min="0" max="100" value="0"
+            oninput="document.getElementById('up-pct-val').textContent=this.value+'%'; updatePctColor(this.value)">
+          <span id="up-pct-val" style="min-width:40px;font-size:20px;font-weight:700;color:var(--gold)">0%</span>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Horas Trabalhadas (nesta sessão)</label>
+          <input type="number" id="up-hours" placeholder="Ex.: 2" min="0" step="0.5">
+        </div>
+        <div class="form-group">
+          <label>Data da Atividade</label>
+          <input type="date" id="up-date">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Descrição do que foi realizado *</label>
+        <textarea id="up-note" placeholder="Descreva as ações realizadas neste período..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Status Atual</label>
+        <select id="up-status">
+          <option value="em_andamento">Em Andamento</option>
+          <option value="concluido">Concluído</option>
+          <option value="pausado">Pausado</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-update-progress')">Cancelar</button>
+      <button class="btn btn-primary" onclick="updateProgress()">💾 Salvar Progresso</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Quick Update (topbar) -->
+<div class="modal-overlay" id="modal-quick-update">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>⚡ Atualização Rápida</h3>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal('modal-quick-update')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Técnico *</label>
+          <select id="qu-tech" onchange="fillTasksByTech2()"></select>
+        </div>
+        <div class="form-group">
+          <label>Atividade *</label>
+          <select id="qu-task"></select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Progresso (%)</label>
+        <div style="display:flex;align-items:center;gap:12px">
+          <input type="range" id="qu-pct" min="0" max="100" value="0"
+            oninput="document.getElementById('qu-pct-val').textContent=this.value+'%'">
+          <span id="qu-pct-val" style="min-width:40px;font-size:20px;font-weight:700;color:var(--gold)">0%</span>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Horas Trabalhadas</label>
+          <input type="number" id="qu-hours" placeholder="Ex.: 2" min="0" step="0.5">
+        </div>
+        <div class="form-group">
+          <label>Data</label>
+          <input type="date" id="qu-date">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>O que foi realizado? *</label>
+        <textarea id="qu-note" placeholder="Descreva as ações realizadas..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-quick-update')">Cancelar</button>
+      <button class="btn btn-primary" onclick="quickUpdate()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Add Technician -->
+<div class="modal-overlay" id="modal-add-tech">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>👷 Novo Técnico</h3>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal('modal-add-tech')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Nome Completo *</label>
+          <input type="text" id="tech-name" placeholder="Ex.: João Silva">
+        </div>
+        <div class="form-group">
+          <label>Matrícula / ID</label>
+          <input type="text" id="tech-id" placeholder="Ex.: TST-001">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Cargo</label>
+          <input type="text" id="tech-role" value="Técnico de Segurança do Trabalho">
+        </div>
+        <div class="form-group">
+          <label>Turno / Área</label>
+          <input type="text" id="tech-shift" placeholder="Ex.: Diurno / Planta A">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Horas Disponíveis/Mês *</label>
+          <input type="number" id="tech-hours" placeholder="Ex.: 176" value="176" min="1">
+        </div>
+        <div class="form-group">
+          <label>E-mail</label>
+          <input type="email" id="tech-email" placeholder="joao@empresa.com">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-add-tech')">Cancelar</button>
+      <button class="btn btn-primary" onclick="addTechnician()">✅ Cadastrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Add User -->
+<div class="modal-overlay" id="modal-add-user">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <h3>🔐 Novo Usuário</h3>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal('modal-add-user')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Nome Completo *</label>
+          <input type="text" id="nu-name" placeholder="Ex.: João Silva">
+        </div>
+        <div class="form-group">
+          <label>Usuário (login) *</label>
+          <input type="text" id="nu-username" placeholder="Ex.: joao.silva" autocomplete="off">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Senha *</label>
+          <input type="password" id="nu-pass" placeholder="Mínimo 4 caracteres" autocomplete="new-password">
+        </div>
+        <div class="form-group">
+          <label>Papel *</label>
+          <select id="nu-role">
+            <option value="tecnico">Técnico (somente leitura + atualizar progresso)</option>
+            <option value="admin">Administrador (acesso total)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Vincular ao Técnico (opcional)</label>
+        <select id="nu-tech-link">
+          <option value="">Nenhum vínculo</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-add-user')">Cancelar</button>
+      <button class="btn btn-primary" onclick="addUser()">✅ Criar Usuário</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Edit User -->
+<div class="modal-overlay" id="modal-edit-user">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <h3>✏️ Editar Usuário</h3>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal('modal-edit-user')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="eu-id">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Nome Completo *</label>
+          <input type="text" id="eu-name">
+        </div>
+        <div class="form-group">
+          <label>Usuário (login)</label>
+          <input type="text" id="eu-username" disabled style="opacity:.6">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Nova Senha <span style="color:var(--text2);font-weight:400">(deixe em branco para manter)</span></label>
+          <input type="password" id="eu-pass" placeholder="••••••••" autocomplete="new-password">
+        </div>
+        <div class="form-group">
+          <label>Papel *</label>
+          <select id="eu-role">
+            <option value="tecnico">Técnico</option>
+            <option value="admin">Administrador</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Técnico Vinculado</label>
+        <select id="eu-tech-link">
+          <option value="">Nenhum vínculo</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-edit-user')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveEditUser()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Confirm Delete Task -->
+<div class="modal-overlay" id="modal-confirm-delete-task">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <h3>⚠️ Excluir Atividade</h3>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal('modal-confirm-delete-task')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:14px;margin-bottom:12px">Tem certeza que deseja excluir a atividade:</p>
+      <div style="background:var(--navy3);border-radius:8px;padding:12px;margin-bottom:14px;font-weight:600" id="delete-task-label"></div>
+      <div class="alert alert-warn">⚠️ Esta ação não pode ser desfeita. Todo o histórico de progresso desta atividade será perdido.</div>
+      <input type="hidden" id="delete-task-id">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-confirm-delete-task')">Cancelar</button>
+      <button class="btn btn-danger" onclick="deleteTask()">🗑️ Excluir Atividade</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Edit Progress Entry -->
+<div class="modal-overlay" id="modal-edit-progress">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <h3>✏️ Editar Atualização</h3>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal('modal-edit-progress')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-warn">⏱️ Edição permitida por até 30 minutos após o registro.</div>
+      <input type="hidden" id="ep-task-id">
+      <input type="hidden" id="ep-entry-index">
+      <div class="form-group">
+        <label>Percentual de Conclusão</label>
+        <div style="display:flex;align-items:center;gap:12px">
+          <input type="range" id="ep-pct" min="0" max="100" value="0"
+            oninput="document.getElementById('ep-pct-val').textContent=this.value+'%'">
+          <span id="ep-pct-val" style="min-width:40px;font-size:18px;font-weight:700;color:var(--gold)">0%</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Horas Trabalhadas</label>
+        <input type="number" id="ep-hours" min="0" step="0.5">
+      </div>
+      <div class="form-group">
+        <label>Descrição do que foi realizado *</label>
+        <textarea id="ep-note"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-edit-progress')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveEditProgress()">💾 Salvar Edição</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Reassign Task -->
+<div class="modal-overlay" id="modal-reassign">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-header">
+      <h3>🔄 Reatribuir Atividade</h3>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal('modal-reassign')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="reassign-task-id">
+      <p id="reassign-task-label" style="font-size:13px;color:var(--text2);margin-bottom:16px"></p>
+      <div class="form-group">
+        <label>Técnico Atual</label>
+        <input type="text" id="reassign-current-tech" disabled style="opacity:.6">
+      </div>
+      <div class="form-group">
+        <label>Novo Técnico Responsável *</label>
+        <select id="reassign-new-tech"></select>
+      </div>
+      <div class="form-group">
+        <label>Motivo da Reatribuição *</label>
+        <textarea id="reassign-reason" placeholder="Ex.: Redistribuição de carga, férias do técnico anterior..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-reassign')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveReassign()">✅ Confirmar Reatribuição</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Edit Technician -->
+<div class="modal-overlay" id="modal-edit-tech">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>✏️ Editar Técnico</h3>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal('modal-edit-tech')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-tech-id">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Nome Completo *</label>
+          <input type="text" id="edit-tech-name">
+        </div>
+        <div class="form-group">
+          <label>Matrícula / ID</label>
+          <input type="text" id="edit-tech-reg">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Cargo</label>
+          <input type="text" id="edit-tech-role">
+        </div>
+        <div class="form-group">
+          <label>Turno / Área</label>
+          <input type="text" id="edit-tech-shift">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Horas Disponíveis/Mês *</label>
+          <input type="number" id="edit-tech-hours" min="1">
+        </div>
+        <div class="form-group">
+          <label>E-mail</label>
+          <input type="email" id="edit-tech-email">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-edit-tech')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveEditTech()">💾 Salvar Alterações</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Confirm Delete Technician -->
+<div class="modal-overlay" id="modal-confirm-delete-tech">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <h3>⚠️ Confirmar Exclusão</h3>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal('modal-confirm-delete-tech')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:14px;margin-bottom:12px">Tem certeza que deseja excluir o técnico <strong id="delete-tech-name-label"></strong>?</p>
+      <div class="alert alert-warn">⚠️ As atividades vinculadas a este técnico <strong>não serão excluídas</strong>, mas ficarão sem responsável atribuído.</div>
+      <input type="hidden" id="delete-tech-id">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-confirm-delete-tech')">Cancelar</button>
+      <button class="btn btn-danger" onclick="deleteTech()">🗑️ Excluir Técnico</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: View Task Details -->
+<div class="modal-overlay" id="modal-task-detail">
+  <div class="modal" style="max-width:720px">
+    <div class="modal-header">
+      <h3 id="detail-title">Detalhes da Atividade</h3>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal('modal-task-detail')">✕</button>
+    </div>
+    <div class="modal-body" id="detail-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-task-detail')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Backup Banner -->
+<div id="backup-banner">
+  <div class="bb-icon">💾</div>
+  <div class="bb-text">
+    <strong>Hora de salvar seu backup!</strong><br>
+    Faz mais de 24h sem exportar. Salve um arquivo de backup para não perder seus dados.
+  </div>
+  <button class="btn btn-primary btn-sm" onclick="exportBackup();hideBanner()">⬇️ Baixar Backup Agora</button>
+  <button class="btn btn-ghost btn-sm" onclick="snoozeBackup()">Lembrar depois</button>
+  <button class="btn btn-ghost btn-icon btn-sm" onclick="hideBanner()">✕</button>
+</div>
+
+<!-- Toast -->
+<div id="toast" style="position:fixed;bottom:24px;right:24px;z-index:999;display:none">
+  <div style="background:var(--navy3);border:1px solid var(--border);border-radius:10px;padding:14px 18px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow);min-width:280px">
+    <span id="toast-icon" style="font-size:18px"></span>
+    <span id="toast-msg" style="font-size:13px"></span>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+//  VISIBILITY FILTER
+//  Admin  → vê tudo
+//  Técnico → vê apenas tarefas vinculadas ao seu technicianId
+// ═══════════════════════════════════════════
+function getVisibleTasks(db) {
+  const session = getSession();
+  if (!session) return [];
+  if (session.role === 'admin') return db.tasks;          // admin vê tudo
+  if (!session.technicianId)   return [];                 // técnico sem vínculo: nada
+  return db.tasks.filter(t => t.technicianId === session.technicianId);
+}
+
+// ═══════════════════════════════════════════
+//  BACKUP & RESTORE
+// ═══════════════════════════════════════════
+const BACKUP_TS_KEY = 'tstDiary_lastBackup';
+
+function exportBackup() {
+  const db   = getDB();
+  const date = new Date().toISOString().split('T')[0];
+  const blob = new Blob([JSON.stringify(db, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `TST_Diary_Backup_${date}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  localStorage.setItem(BACKUP_TS_KEY, Date.now().toString());
+  hideBanner();
+  toast('Backup exportado com sucesso! Guarde o arquivo em local seguro.', '💾');
+}
+
+function importBackup(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      // Validate minimum structure
+      if (!data.technicians || !data.tasks) {
+        toast('Arquivo inválido. Selecione um backup gerado pelo TST Diary.', '⚠️'); return;
+      }
+      if (!confirm(`Importar backup?\n\nIsso vai SUBSTITUIR todos os dados atuais pelos do arquivo:\n• ${data.technicians.length} técnico(s)\n• ${data.tasks.length} atividade(s)\n• ${(data.auditLog||[]).length} registro(s) de histórico\n\nDeseja continuar?`)) return;
+      // Ensure users exist
+      if (!data.users) data.users = [];
+      ensureAdminUser(data);
+      localStorage.setItem(DB_KEY, JSON.stringify(data));
+      toast('Backup restaurado com sucesso!', '✅');
+      setTimeout(() => location.reload(), 1200);
+    } catch {
+      toast('Erro ao ler o arquivo. Verifique se é um backup válido.', '⚠️');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = ''; // reset input
+}
+
+function checkBackupReminder() {
+  if (!isAdmin()) return; // backup só para admin
+  const last   = parseInt(localStorage.getItem(BACKUP_TS_KEY) || '0');
+  const snoozd = parseInt(localStorage.getItem('tstDiary_backupSnooze') || '0');
+  const now_   = Date.now();
+  const day    = 24 * 60 * 60 * 1000;
+  // Show if: never backed up and has real data, OR last backup > 24h ago (and not snoozed)
+  const db = getDB();
+  const hasRealData = db.tasks.length > 0 || db.technicians.length > 0;
+  if (!hasRealData) return;
+  if (now_ - snoozd < 4 * 60 * 60 * 1000) return; // snoozed for 4h
+  if (last === 0 || now_ - last > day) {
+    setTimeout(() => {
+      document.getElementById('backup-banner').style.display = 'flex';
+    }, 5000); // show 5s after load
+  }
+}
+
+function hideBanner()  { document.getElementById('backup-banner').style.display = 'none'; }
+function snoozeBackup() {
+  localStorage.setItem('tstDiary_backupSnooze', Date.now().toString());
+  hideBanner();
+  toast('Lembrete adiado por 4 horas.', '⏰');
+}
+
+// ═══════════════════════════════════════════
+//  AUTH & ACCESS CONTROL
+// ═══════════════════════════════════════════
+const SESSION_KEY = 'tstDiary_session';
+
+function hashPass(p) {
+  // Simple deterministic hash — adequate for local/intranet use
+  let h = 0;
+  for (let i = 0; i < p.length; i++) { h = Math.imul(31, h) + p.charCodeAt(i) | 0; }
+  return 'h' + Math.abs(h).toString(16);
+}
+
+function getSession() {
+  try { return JSON.parse(sessionStorage.getItem(SESSION_KEY)); } catch { return null; }
+}
+function setSession(user) { sessionStorage.setItem(SESSION_KEY, JSON.stringify(user)); }
+function clearSession()   { sessionStorage.removeItem(SESSION_KEY); }
+function isAdmin()        { const s = getSession(); return s && s.role === 'admin'; }
+function currentUser()    { return getSession(); }
+
+async function doLogin() {
+  // Busca banco atualizado do Supabase antes de validar
+  if (IS_SUPABASE) await fetchFromServer();
+  const username = document.getElementById('login-user').value.trim().toLowerCase();
+  const pass     = document.getElementById('login-pass').value;
+  const db       = getDB();
+  const user     = db.users && db.users.find(u => u.username === username && u.passwordHash === hashPass(pass));
+  if (!user) {
+    const errEl = document.getElementById('login-error');
+    errEl.style.display = 'block';
+    document.getElementById('login-pass').value = '';
+    setTimeout(() => { errEl.style.display = 'none'; }, 3000);
+    return;
+  }
+  setSession({ id: user.id, username: user.username, name: user.name, role: user.role, technicianId: user.technicianId || null });
+  document.getElementById('login-screen').classList.add('hidden');
+  applyRoleUI();
+  renderPage('dashboard');
+}
+
+function doLogout() {
+  clearSession();
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+  document.getElementById('login-screen').classList.remove('hidden');
+}
+
+function applyRoleUI() {
+  const session = getSession();
+  if (!session) return;
+  // Admin class on body
+  document.body.classList.toggle('is-admin', session.role === 'admin');
+  // Topbar info
+  document.getElementById('topbar-username').textContent = session.name.split(' ')[0];
+  const rb = document.getElementById('topbar-role-badge');
+  rb.textContent = session.role === 'admin' ? 'Admin' : 'Técnico';
+  rb.className = 'role-badge ' + (session.role === 'admin' ? 'role-admin' : 'role-tecnico');
+  // Mostra/oculta elementos exclusivos do admin
+  const adminDisplay = session.role === 'admin';
+  document.querySelectorAll('.admin-only').forEach(el => {
+    el.style.display = adminDisplay ? 'flex' : 'none';
+  });
+  document.querySelectorAll('.admin-only-block').forEach(el => {
+    el.style.display = adminDisplay ? 'block' : 'none';
+  });
+  // Backup buttons — somente admin
+  const backupBtns = document.getElementById('sidebar-backup-btns');
+  if (backupBtns) backupBtns.style.display = adminDisplay ? 'block' : 'none';
+  // Banner de backup — somente admin
+  const banner = document.getElementById('backup-banner');
+  if (banner && !adminDisplay) banner.style.display = 'none';
+}
+
+// ── USER MANAGEMENT ──
+function ensureAdminUser(db) {
+  if (!db.users) db.users = [];
+  if (!db.users.find(u => u.role === 'admin')) {
+    db.users.push({
+      id: uid(), username: 'admin', name: 'Administrador',
+      passwordHash: hashPass('admin123'), role: 'admin',
+      technicianId: null, createdAt: now()
+    });
+  }
+}
+
+function addUser() {
+  const name     = document.getElementById('nu-name').value.trim();
+  const username = document.getElementById('nu-username').value.trim().toLowerCase();
+  const pass     = document.getElementById('nu-pass').value;
+  const role     = document.getElementById('nu-role').value;
+  const techLink = document.getElementById('nu-tech-link').value;
+  if (!name)           { toast('Preencha o nome!','⚠️'); return; }
+  if (!username)       { toast('Preencha o usuário!','⚠️'); return; }
+  if (pass.length < 4) { toast('Senha deve ter no mínimo 4 caracteres!','⚠️'); return; }
+  const db = getDB();
+  if (db.users.find(u => u.username === username)) { toast('Este usuário já existe!','⚠️'); return; }
+  db.users.push({ id:uid(), username, name, passwordHash:hashPass(pass), role, technicianId:techLink||null, createdAt:now() });
+  db.auditLog.push({ id:uid(), type:'user_created', timestamp:now(), data:{ username, name, role } });
+  saveDB(db);
+  closeModal('modal-add-user');
+  toast(`Usuário "${username}" criado!`);
+  renderUsers();
+  ['nu-name','nu-username','nu-pass'].forEach(id => document.getElementById(id).value = '');
+}
+
+function openEditUser(userId) {
+  const db   = getDB();
+  const user = db.users.find(u => u.id === userId);
+  if (!user) return;
+  document.getElementById('eu-id').value       = user.id;
+  document.getElementById('eu-name').value     = user.name;
+  document.getElementById('eu-username').value = user.username;
+  document.getElementById('eu-pass').value     = '';
+  document.getElementById('eu-role').value     = user.role;
+  populateTechLinkSelect('eu-tech-link', user.technicianId);
+  openModal('modal-edit-user');
+}
+
+function saveEditUser() {
+  const id   = document.getElementById('eu-id').value;
+  const name = document.getElementById('eu-name').value.trim();
+  const pass = document.getElementById('eu-pass').value;
+  const role = document.getElementById('eu-role').value;
+  const tech = document.getElementById('eu-tech-link').value;
+  if (!name) { toast('Preencha o nome!','⚠️'); return; }
+  const db   = getDB();
+  const user = db.users.find(u => u.id === id);
+  if (!user) return;
+  // Prevent removing the last admin
+  if (user.role === 'admin' && role !== 'admin' && db.users.filter(u=>u.role==='admin').length === 1) {
+    toast('Não é possível remover o único administrador!','⚠️'); return;
+  }
+  user.name         = name;
+  user.role         = role;
+  user.technicianId = tech || null;
+  if (pass.length >= 4) user.passwordHash = hashPass(pass);
+  db.auditLog.push({ id:uid(), type:'user_updated', timestamp:now(), data:{ username:user.username, name, role } });
+  saveDB(db);
+  closeModal('modal-edit-user');
+  toast('Usuário atualizado!');
+  renderUsers();
+}
+
+function deleteUser(userId) {
+  const db   = getDB();
+  const user = db.users.find(u => u.id === userId);
+  if (!user) return;
+  if (user.role === 'admin' && db.users.filter(u=>u.role==='admin').length === 1) {
+    toast('Não é possível excluir o único administrador!','⚠️'); return;
+  }
+  if (getSession()?.id === userId) { toast('Você não pode excluir seu próprio usuário!','⚠️'); return; }
+  if (!confirm(`Excluir o usuário "${user.username}"?`)) return;
+  db.users = db.users.filter(u => u.id !== userId);
+  db.auditLog.push({ id:uid(), type:'user_deleted', timestamp:now(), data:{ username:user.username } });
+  saveDB(db);
+  toast(`Usuário "${user.username}" excluído.`,'🗑️');
+  renderUsers();
+}
+
+function populateTechLinkSelect(selId, selectedId) {
+  const db  = getDB();
+  const sel = document.getElementById(selId);
+  if (!sel) return;
+  sel.innerHTML = '<option value="">Nenhum vínculo</option>';
+  db.technicians.forEach(t => { sel.innerHTML += `<option value="${t.id}">${t.name}</option>`; });
+  if (selectedId) sel.value = selectedId;
+}
+
+function renderUsers() {
+  const db    = getDB();
+  const tbody = document.getElementById('users-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = db.users.map(u => {
+    const techName = u.technicianId ? getTechName(u.technicianId) : '—';
+    const isSelf   = getSession()?.id === u.id;
+    return `<tr>
+      <td><code style="background:var(--navy3);padding:2px 8px;border-radius:5px;font-size:12px">${u.username}</code> ${isSelf?'<span class="tag">você</span>':''}</td>
+      <td style="font-weight:600">${u.name}</td>
+      <td><span class="role-badge ${u.role==='admin'?'role-admin':'role-tecnico'}">${u.role==='admin'?'Admin':'Técnico'}</span></td>
+      <td style="color:var(--text2)">${techName}</td>
+      <td style="color:var(--text2);font-size:12px">${fmtDateShort(u.createdAt)}</td>
+      <td><div style="display:flex;gap:6px">
+        <button class="btn btn-ghost btn-sm" onclick="openEditUser('${u.id}')">✏️</button>
+        ${!isSelf ? `<button class="btn btn-danger btn-sm" onclick="deleteUser('${u.id}')">🗑️</button>` : ''}
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── DELETE TASK (admin only) ──
+function confirmDeleteTask(taskId, taskTitle) {
+  if (!isAdmin()) { toast('Apenas o administrador pode excluir atividades!','🔒'); return; }
+  document.getElementById('delete-task-id').value         = taskId;
+  document.getElementById('delete-task-label').textContent = taskTitle;
+  openModal('modal-confirm-delete-task');
+}
+
+function deleteTask() {
+  const id = document.getElementById('delete-task-id').value;
+  const db = getDB();
+  const task = db.tasks.find(t => t.id === id);
+  if (!task) return;
+  db.auditLog.push({ id:uid(), type:'task_deleted', timestamp:now(), taskTitle:task.title,
+    technicianId:task.technicianId, data:{ title:task.title } });
+  db.tasks = db.tasks.filter(t => t.id !== id);
+  saveDB(db);
+  closeModal('modal-confirm-delete-task');
+  toast(`Atividade excluída.`,'🗑️');
+  renderTasksPage();
+  renderDashboard();
+}
+
+// ═══════════════════════════════════════════
+//  CONFIGURAÇÃO SUPABASE
+//  Preencha após criar o projeto em supabase.com
+// ═══════════════════════════════════════════
+const SUPABASE_URL = 'https://eowlluilfpwmvzkepuex.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVvd2xsdWlsZnB3bXZ6a2VwdWV4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5MzMwMTMsImV4cCI6MjA5NjUwOTAxM30.V4K3TAwm2pOSCGMeyLea8A_6pKifl_haQTayMTzyxVE';
+const STORE_ID     = 'tstdiary_main';
+
+const IS_SUPABASE  = SUPABASE_URL.startsWith('https://') && SUPABASE_URL !== 'COLE_AQUI_A_URL_DO_SUPABASE';
+
+// ═══════════════════════════════════════════
+//  STATE & PERSISTENCE — LOCAL + SUPABASE
+// ═══════════════════════════════════════════
+const DB_KEY = 'tstDiary_v2';
+
+function getDB() {
+  try { return JSON.parse(localStorage.getItem(DB_KEY)) || defaultDB(); }
+  catch { return defaultDB(); }
+}
+
+function saveDB(db) {
+  localStorage.setItem(DB_KEY, JSON.stringify(db));
+  if (IS_SUPABASE) pushToServer(db);
+}
+
+// ── Supabase REST helpers ───────────────────────────────────────
+function sbHeaders() {
+  return {
+    'apikey':        SUPABASE_KEY,
+    'Authorization': `Bearer ${SUPABASE_KEY}`,
+    'Content-Type':  'application/json',
+    'Prefer':        'resolution=merge-duplicates'
+  };
+}
+
+let _syncStatus = 'local';
+
+async function fetchFromServer() {
+  if (!IS_SUPABASE) { setSyncStatus('local'); return false; }
+  try {
+    setSyncStatus('saving');
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/app_store?id=eq.${STORE_ID}&select=data`,
+      { headers: sbHeaders(), cache: 'no-store' }
+    );
+    if (!r.ok) { setSyncStatus('offline'); return false; }
+    const rows = await r.json();
+    if (rows && rows.length > 0 && rows[0].data) {
+      localStorage.setItem(DB_KEY, JSON.stringify(rows[0].data));
+      setSyncStatus('online');
+      return true;
+    }
+    setSyncStatus('online');
+    return false;
+  } catch {
+    setSyncStatus('offline');
+    return false;
+  }
+}
+
+async function pushToServer(db) {
+  if (!IS_SUPABASE) return;
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/app_store`, {
+      method:  'POST',
+      headers: sbHeaders(),
+      body:    JSON.stringify({ id: STORE_ID, data: db, updated_at: new Date().toISOString() })
+    });
+    setSyncStatus(r.ok ? 'online' : 'offline');
+  } catch {
+    setSyncStatus('offline');
+  }
+}
+
+function setSyncStatus(status) {
+  _syncStatus = status;
+  const el = document.getElementById('sync-indicator');
+  if (!el) return;
+  const cfg = {
+    online:  { dot: '🟢', text: 'Supabase Online', color: 'var(--green)' },
+    offline: { dot: '🔴', text: 'Sem conexão',      color: 'var(--red)'  },
+    local:   { dot: '🟡', text: 'Modo local',       color: 'var(--gold)' },
+    saving:  { dot: '🔵', text: 'Sincronizando…',   color: 'var(--cyan)' },
+  };
+  const c = cfg[status] || cfg.local;
+  el.innerHTML = `<span style="font-size:10px">${c.dot}</span> <span style="color:${c.color}">${c.text}</span>`;
+}
+
+function defaultDB() {
+  return {
+    technicians: [],
+    tasks: [],
+    auditLog: [],
+    monthlyHours: {}   // { techId: { "2025-06": 176 } }
+  };
+}
+
+// Seed demo data on first run ONLY — never overwrite real data
+function seedIfEmpty() {
+  const db = getDB();
+  // Only seed if truly empty (no technicians AND no tasks AND no users beyond admin)
+  const realUsers = (db.users||[]).filter(u => u.username !== 'admin');
+  if (db.technicians.length > 0 || db.tasks.length > 0 || realUsers.length > 0) return;
+
+  const techs = [
+    { id: uid(), name: 'Carlos Mendes',   role: 'Técnico de Segurança', shift: 'Diurno / Planta A', registration: 'TST-001', email: 'carlos@empresa.com', monthlyHours: 176, createdAt: now() },
+    { id: uid(), name: 'Fernanda Lima',   role: 'Técnica de Segurança', shift: 'Diurno / Planta B', registration: 'TST-002', email: 'fernanda@empresa.com', monthlyHours: 160, createdAt: now() },
+    { id: uid(), name: 'Roberto Alves',   role: 'Técnico de Segurança', shift: 'Turno / Operações', registration: 'TST-003', email: 'roberto@empresa.com', monthlyHours: 168, createdAt: now() },
+  ];
+
+  const defaultTasks = [
+    { title: 'Descrições de cargo para o PGR',            cat: 'Administrativo', priority: 'alta' },
+    { title: 'Adequação de procedimentos para NR 20',     cat: 'NR',             priority: 'alta' },
+    { title: 'Andamento da atualização do AVCB BEC',      cat: 'Administrativo', priority: 'media' },
+    { title: 'Verificação de SOP e IT para trabalhos em altura', cat: 'NR',      priority: 'alta' },
+    { title: 'Projeto para Brigada - Segurança no Lar',   cat: 'Projeto',        priority: 'media' },
+    { title: 'Projeto para simulado NR 11',               cat: 'Projeto',        priority: 'media' },
+    { title: 'Compra de equipamentos de emergência',      cat: 'Compras',        priority: 'alta' },
+    { title: 'Compra de equipamentos de LOTO',            cat: 'Compras',        priority: 'alta' },
+    { title: 'E-Social - evento Ergonomia',               cat: 'E-Social',       priority: 'media' },
+    { title: 'Lançamento de DDS',                         cat: 'Campo',          priority: 'baixa' },
+    { title: 'Lançamento de Permissões de Trabalho',      cat: 'Administrativo', priority: 'media' },
+    { title: 'Lançamento de Desvios',                     cat: 'Campo',          priority: 'media' },
+    { title: 'Treinamentos Online - Gestão',              cat: 'Treinamento',    priority: 'media' },
+    { title: 'Elaboração de PPP',                         cat: 'Administrativo', priority: 'alta' },
+    { title: 'Levantamento de cenários de quedas de Bag', cat: 'Campo',          priority: 'alta' },
+    { title: 'Mudanças de função no E-Social',            cat: 'E-Social',       priority: 'media' },
+  ];
+
+  const hoursMap = [8,16,12,20,24,10,6,8,14,4,8,12,6,18,16,10];
+  const progMap  = [30,15,45,25,10,60,80,40,20,70,55,35,50,10,25,65];
+  const statMap  = (p) => p===100?'concluido':p>0?'em_andamento':'nao_iniciado';
+
+  const tasks = defaultTasks.map((t,i) => {
+    const tech = techs[i % techs.length];
+    const pct  = progMap[i];
+    return {
+      id: uid(), title: t.title, category: t.cat, technicianId: tech.id,
+      estimatedHours: hoursMap[i], realizedHours: Math.round(hoursMap[i]*pct/100 * 10)/10,
+      priority: t.priority, status: statMap(pct),
+      deadline: '', description: '',
+      progress: pct,
+      progressLog: pct > 0 ? [{
+        date: now(), pct, note: 'Registro inicial de progresso.', hoursWorked: Math.round(hoursMap[i]*pct/100*10)/10
+      }] : [],
+      createdAt: now()
+    };
+  });
+
+  db.technicians = techs;
+  db.tasks = tasks;
+  db.auditLog = tasks.filter(t=>t.progress>0).map(t=>({
+    id: uid(), type: 'progress', timestamp: now(),
+    taskId: t.id, taskTitle: t.title,
+    technicianId: t.technicianId,
+    data: { pct: t.progress, note: 'Registro inicial.' }
+  }));
+  db.auditLog.push(...techs.map(t=>({ id:uid(), type:'tech_created', timestamp:now(), data:{ name:t.name } })));
+  saveDB(db);
+}
+
+// ═══════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function now()  { return new Date().toISOString(); }
+function fmtDate(iso) {
+  if (!iso) return '—';
+  // Entradas antigas gravadas como meia-noite UTC (bug de fuso) — exibe só a data
+  if (iso.includes('T00:00:00')) {
+    const [y,m,d] = iso.split('T')[0].split('-');
+    return `${d}/${m}/${y}`;
+  }
+  const d = new Date(iso);
+  return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+}
+function fmtDateShort(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('pt-BR');
+}
+function fmtMonth(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+}
+function getTechName(id) {
+  const db = getDB();
+  const t = db.technicians.find(x=>x.id===id);
+  return t ? t.name : '—';
+}
+function getInitials(name) {
+  return name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+}
+function pctColor(p) {
+  if (p >= 80) return 'var(--green)';
+  if (p >= 50) return 'var(--gold)';
+  if (p >= 20) return 'var(--orange)';
+  return 'var(--red)';
+}
+function statusBadge(s) {
+  const m = { nao_iniciado:'badge-red', em_andamento:'badge-gold', concluido:'badge-green', pausado:'badge-purple' };
+  const l = { nao_iniciado:'Não Iniciado', em_andamento:'Em Andamento', concluido:'Concluído', pausado:'Pausado' };
+  return `<span class="badge ${m[s]||'badge-blue'}">${l[s]||s}</span>`;
+}
+function priorityBadge(p) {
+  const m = { baixa:'badge-green', media:'badge-gold', alta:'badge-red' };
+  const l = { baixa:'🟢 Baixa', media:'🟡 Média', alta:'🔴 Alta' };
+  return `<span class="badge ${m[p]||'badge-blue'}">${l[p]||p}</span>`;
+}
+function catBadge(c) {
+  const m = { Administrativo:'badge-blue', Campo:'badge-green', Treinamento:'badge-purple',
+    Projeto:'badge-cyan', Compras:'badge-orange', 'E-Social':'badge-gold', 'NR':'badge-red' };
+  return `<span class="badge ${m[c]||'badge-blue'}">${c}</span>`;
+}
+function toast(msg, icon='✅') {
+  const el = document.getElementById('toast');
+  document.getElementById('toast-icon').textContent = icon;
+  document.getElementById('toast-msg').textContent = msg;
+  el.style.display = 'block';
+  setTimeout(()=>{ el.style.display='none'; }, 3000);
+}
+
+// ═══════════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════════
+const PAGE_TITLES = {
+  dashboard:'Dashboard', tasks:'Atividades', technicians:'Técnicos',
+  productivity:'Produtividade', history:'Histórico', reports:'Relatórios',
+  users:'Usuários e Acessos'
+};
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('mobile-open');
+  document.getElementById('sidebar-overlay').classList.toggle('visible');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('mobile-open');
+  document.getElementById('sidebar-overlay').classList.remove('visible');
+}
+function setMobileNav(el) {
+  document.querySelectorAll('.mbn-item').forEach(i => i.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>{ if(n.getAttribute('onclick')?.includes(name)) n.classList.add('active'); });
+  document.getElementById('topbar-title').textContent = PAGE_TITLES[name]||name;
+  closeSidebar();
+  renderPage(name);
+}
+function renderPage(name) {
+  if (name==='dashboard')    renderDashboard();
+  if (name==='tasks')        renderTasksPage();
+  if (name==='technicians')  renderTechnicians();
+  if (name==='productivity') renderProductivity('diario');
+  if (name==='history')      renderHistoryPage();
+  if (name==='reports')      renderReports();
+  if (name==='users')        { if(!isAdmin()){showPage('dashboard');return;} renderUsers(); }
+  if (name==='reports')      { if(!isAdmin()){showPage('dashboard'); toast('Acesso restrito ao administrador.','🔒'); return;} renderReports(); return; }
+}
+
+// ═══════════════════════════════════════════
+//  MODAL HELPERS
+// ═══════════════════════════════════════════
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+  if (id==='modal-add-task' || id==='modal-update-progress' || id==='modal-quick-update') {
+    populateTechSelects();
+    // Técnico não escolhe o responsável — campo oculto
+    const techRow = document.getElementById('nt-tech')?.closest('.form-row');
+    if (techRow) techRow.style.display = isAdmin() ? '' : 'none';
+  }
+  if (id==='modal-add-user') populateTechLinkSelect('nu-tech-link', null);
+  if (id==='modal-update-progress') { fillTasksByTech(); setDateToday('up-date'); }
+  if (id==='modal-quick-update') { fillTasksByTech2(); setDateToday('qu-date'); }
+}
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function setDateToday(id) {
+  const el = document.getElementById(id);
+  if (el) el.value = new Date().toISOString().split('T')[0];
+}
+document.querySelectorAll('.modal-overlay').forEach(m=>{
+  m.addEventListener('click', e=>{ if(e.target===m) m.classList.remove('open'); });
+});
+
+function populateTechSelects() {
+  const db = getDB();
+  ['nt-tech','up-tech','qu-tech','report-tech'].forEach(id=>{
+    const el = document.getElementById(id); if(!el) return;
+    const cur = el.value;
+    el.innerHTML = (id==='report-tech'?'<option value="">Toda a Equipe</option>':'');
+    db.technicians.forEach(t=>{ el.innerHTML += `<option value="${t.id}">${t.name}</option>`; });
+    if (cur) el.value = cur;
+  });
+  ['filter-tech','hist-filter-tech'].forEach(id=>{
+    const el = document.getElementById(id); if(!el) return;
+    const cur = el.value;
+    el.innerHTML = '<option value="">Todos os Técnicos</option>';
+    db.technicians.forEach(t=>{ el.innerHTML += `<option value="${t.id}">${t.name}</option>`; });
+    if (cur) el.value = cur;
+  });
+}
+
+function fillTasksByTech() {
+  const techId = document.getElementById('up-tech').value;
+  fillTasksFor(techId, 'up-task', 'up-pct', 'up-pct-val');
+}
+function fillTasksByTech2() {
+  const techId = document.getElementById('qu-tech').value;
+  fillTasksFor(techId, 'qu-task', 'qu-pct', 'qu-pct-val');
+}
+function fillTasksFor(techId, taskSel, pctSel, pctVal) {
+  const db = getDB();
+  const oldSel = document.getElementById(taskSel);
+  if (!oldSel) return;
+  // Clona o elemento para remover todos os event listeners acumulados
+  const sel = oldSel.cloneNode(false);
+  oldSel.parentNode.replaceChild(sel, oldSel);
+  const tasks = db.tasks.filter(t=>!techId||t.technicianId===techId);
+  sel.innerHTML = tasks.map(t=>`<option value="${t.id}">${t.title} (${t.progress}%)</option>`).join('');
+  if (tasks.length > 0) {
+    document.getElementById(pctSel).value = tasks[0].progress;
+    document.getElementById(pctVal).textContent = tasks[0].progress + '%';
+  }
+  sel.addEventListener('change', function() {
+    const t = db.tasks.find(x=>x.id===this.value);
+    if (t) { document.getElementById(pctSel).value = t.progress; document.getElementById(pctVal).textContent = t.progress+'%'; }
+  });
+}
+
+// ═══════════════════════════════════════════
+//  ADD TASK
+// ═══════════════════════════════════════════
+function addTask() {
+  const session_ = getSession();
+  const title    = document.getElementById('nt-title').value.trim();
+  // Técnico só cria atividades para si mesmo
+  const techId   = session_.role === 'admin'
+    ? document.getElementById('nt-tech').value
+    : session_.technicianId;
+  const hours  = parseFloat(document.getElementById('nt-hours').value);
+  if (!title) { toast('Preencha o nome da atividade!','⚠️'); return; }
+  if (!techId) { toast('Selecione um técnico!','⚠️'); return; }
+  if (!hours || hours <= 0) { toast('Informe as horas estimadas!','⚠️'); return; }
+
+  const pct = parseInt(document.getElementById('nt-progress').value)||0;
+  const task = {
+    id: uid(),
+    title,
+    category: document.getElementById('nt-cat').value,
+    technicianId: techId,
+    estimatedHours: hours,
+    realizedHours: 0,
+    priority: document.getElementById('nt-priority').value,
+    status: pct===100 ? 'concluido' : pct>0 ? 'em_andamento' : 'nao_iniciado',
+    deadline: document.getElementById('nt-deadline').value,
+    description: document.getElementById('nt-desc').value,
+    progress: pct,
+    progressLog: pct > 0 ? [{ date: now(), pct, note: 'Registro inicial.', hoursWorked: 0 }] : [],
+    createdAt: now()
+  };
+
+  const db = getDB();
+  db.tasks.push(task);
+  db.auditLog.push({ id:uid(), type:'task_created', timestamp:now(), taskId:task.id, taskTitle:task.title, technicianId:techId, data:{ title, hours, pct } });
+  saveDB(db);
+  closeModal('modal-add-task');
+  toast('Atividade cadastrada com sucesso!');
+  renderTasksPage();
+  renderDashboard();
+  // reset
+  ['nt-title','nt-hours','nt-deadline','nt-desc'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('nt-progress').value=0; document.getElementById('nt-progress-val').textContent='0%';
+}
+
+// ═══════════════════════════════════════════
+//  UPDATE PROGRESS (shared logic)
+// ═══════════════════════════════════════════
+function doUpdateProgress(taskId, pct, note, hoursWorked, date, status) {
+  if (!taskId) { toast('Selecione uma atividade!','⚠️'); return false; }
+  if (!note)   { toast('Descreva o que foi realizado!','⚠️'); return false; }
+
+  const db = getDB();
+  const task = db.tasks.find(t=>t.id===taskId);
+  if (!task) return false;
+
+  const prevPct = task.progress;
+  task.progress = pct;
+  task.status = status || (pct===100 ? 'concluido' : pct>0 ? 'em_andamento' : 'nao_iniciado');
+  task.realizedHours = (task.realizedHours||0) + (parseFloat(hoursWorked)||0);
+  // Usar T12:00:00 evita que datas sem hora sejam lidas como meia-noite UTC (21h no Brasil)
+  task.progressLog.push({ date: date ? new Date(date + 'T12:00:00').toISOString() : now(), pct, note, hoursWorked: parseFloat(hoursWorked)||0 });
+
+  db.auditLog.push({
+    id: uid(), type:'progress', timestamp: now(),
+    taskId: task.id, taskTitle: task.title,
+    technicianId: task.technicianId,
+    data: { prevPct, pct, note, hoursWorked: parseFloat(hoursWorked)||0, date }
+  });
+  saveDB(db);
+  return true;
+}
+
+function updateProgress() {
+  const ok = doUpdateProgress(
+    document.getElementById('up-task').value,
+    parseInt(document.getElementById('up-pct').value),
+    document.getElementById('up-note').value.trim(),
+    document.getElementById('up-hours').value,
+    document.getElementById('up-date').value,
+    document.getElementById('up-status').value
+  );
+  if (ok) {
+    closeModal('modal-update-progress');
+    toast('Progresso registrado!');
+    renderTasksPage(); renderDashboard();
+  }
+}
+
+function quickUpdate() {
+  const ok = doUpdateProgress(
+    document.getElementById('qu-task').value,
+    parseInt(document.getElementById('qu-pct').value),
+    document.getElementById('qu-note').value.trim(),
+    document.getElementById('qu-hours').value,
+    document.getElementById('qu-date').value,
+    null
+  );
+  if (ok) {
+    closeModal('modal-quick-update');
+    toast('Progresso registrado!');
+    renderPage(currentPage());
+  }
+}
+
+function currentPage() {
+  const a = document.querySelector('.page.active');
+  return a ? a.id.replace('page-','') : 'dashboard';
+}
+function updatePctColor(v) { document.getElementById('up-pct-val').style.color = pctColor(v); }
+
+// ═══════════════════════════════════════════
+//  ADD TECHNICIAN
+// ═══════════════════════════════════════════
+function addTechnician() {
+  const name = document.getElementById('tech-name').value.trim();
+  const hours = parseInt(document.getElementById('tech-hours').value);
+  if (!name)  { toast('Preencha o nome!','⚠️'); return; }
+  if (!hours) { toast('Informe as horas mensais!','⚠️'); return; }
+
+  const tech = {
+    id: uid(), name,
+    registration: document.getElementById('tech-id').value,
+    role: document.getElementById('tech-role').value || 'Técnico de Segurança do Trabalho',
+    shift: document.getElementById('tech-shift').value,
+    email: document.getElementById('tech-email').value,
+    monthlyHours: hours,
+    createdAt: now()
+  };
+
+  const db = getDB();
+  db.technicians.push(tech);
+  db.auditLog.push({ id:uid(), type:'tech_created', timestamp:now(), data:{ name:tech.name, hours } });
+  saveDB(db);
+  closeModal('modal-add-tech');
+  toast('Técnico cadastrado!');
+  renderTechnicians();
+  ['tech-name','tech-id','tech-shift','tech-email'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('tech-role').value='Técnico de Segurança do Trabalho';
+  document.getElementById('tech-hours').value='176';
+}
+
+// ═══════════════════════════════════════════
+//  RENDER: DASHBOARD
+// ═══════════════════════════════════════════
+function renderDashboard() {
+  const db    = getDB();
+  const tasks = getVisibleTasks(db);
+  const total = tasks.length;
+  const concluded = tasks.filter(t=>t.status==='concluido').length;
+  const inProgress = tasks.filter(t=>t.status==='em_andamento').length;
+  const avgPct = total ? Math.round(tasks.reduce((a,t)=>a+t.progress,0)/total) : 0;
+  const totalEstH = tasks.reduce((a,t)=>a+(t.estimatedHours||0),0);
+  const totalRealH = tasks.reduce((a,t)=>a+(t.realizedHours||0),0);
+
+  // KPIs
+  document.getElementById('kpi-grid').innerHTML = `
+    <div class="kpi-card" style="--accent:var(--gold)">
+      <div class="kpi-icon">📋</div>
+      <div class="kpi-value">${total}</div>
+      <div class="kpi-label">Total de Atividades</div>
+      <div class="kpi-sub">${inProgress} em andamento</div>
+    </div>
+    <div class="kpi-card" style="--accent:var(--green)">
+      <div class="kpi-icon">✅</div>
+      <div class="kpi-value">${concluded}</div>
+      <div class="kpi-label">Concluídas</div>
+      <div class="kpi-sub">${total?Math.round(concluded/total*100):0}% do total</div>
+    </div>
+    <div class="kpi-card" style="--accent:var(--cyan)">
+      <div class="kpi-icon">📊</div>
+      <div class="kpi-value">${avgPct}%</div>
+      <div class="kpi-label">Progresso Médio Geral</div>
+      <div class="kpi-sub">${db.technicians.length} técnicos ativos</div>
+    </div>
+    <div class="kpi-card" style="--accent:var(--purple)">
+      <div class="kpi-icon">⏱️</div>
+      <div class="kpi-value">${totalRealH.toFixed(0)}h</div>
+      <div class="kpi-label">Horas Realizadas</div>
+      <div class="kpi-sub">de ${totalEstH.toFixed(0)}h estimadas</div>
+    </div>
+  `;
+
+  // Tasks progress list
+  const sorted = [...tasks].sort((a,b)=>b.progress-a.progress).slice(0,8);
+  document.getElementById('tasks-progress-list').innerHTML = sorted.map(t=>`
+    <div style="margin-bottom:14px">
+      <div class="prog-label">
+        <span style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">${t.title}</span>
+        <span style="font-weight:700;color:${pctColor(t.progress)}">${t.progress}%</span>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-fill" style="width:${t.progress}%;background:${pctColor(t.progress)}"></div>
+      </div>
+      <div style="font-size:11px;color:var(--text2);margin-top:3px">${getTechName(t.technicianId)} · ${t.category}</div>
+    </div>
+  `).join('');
+
+  // Recent log
+  const recent = [...db.auditLog].reverse().slice(0,6);
+  document.getElementById('recent-log').innerHTML = recent.length ? recent.map(l=>`
+    <div class="log-item">
+      <div class="log-dot" style="background:${l.type==='progress'?'var(--green)':l.type==='task_created'?'var(--gold)':'var(--cyan)'}"></div>
+      <div class="log-content">
+        <div class="log-title">${l.type==='progress'?`Progresso atualizado: ${l.taskTitle}`:l.type==='task_created'?`Nova atividade criada: ${l.taskTitle||l.data?.title}`:l.type==='tech_created'?`Técnico cadastrado: ${l.data?.name}`:'Atualização'}</div>
+        <div class="log-meta">${fmtDate(l.timestamp)} ${l.technicianId?'· '+getTechName(l.technicianId):''}</div>
+        ${l.type==='progress'?`<div class="log-detail">→ ${l.data.prevPct}% para ${l.data.pct}% · ${l.data.hoursWorked}h · "${l.data.note}"</div>`:''}
+      </div>
+    </div>
+  `).join('') : '<div class="empty"><div class="empty-icon">📭</div><p>Nenhum registro ainda.</p></div>';
+
+  // Charts
+  renderCharts(db);
+}
+
+let chartTech=null, chartMonthly=null, chartStatus=null;
+function renderCharts(db) {
+  const session_c    = getSession();
+  const visibleTasks = getVisibleTasks(db);
+  // Técnico só vê a si mesmo nos gráficos; admin vê todos
+  const chartTechs = session_c.role === 'admin'
+    ? db.technicians
+    : db.technicians.filter(t => t.id === session_c.technicianId);
+
+  // Technician workload
+  const techMap = {};
+  chartTechs.forEach(t=>{ techMap[t.id]={name:t.name.split(' ')[0],h:0}; });
+  visibleTasks.forEach(t=>{ if(techMap[t.technicianId]) techMap[t.technicianId].h+=t.realizedHours||0; });
+  const techNames = Object.values(techMap).map(t=>t.name);
+  const techHours = Object.values(techMap).map(t=>t.h);
+
+  const ctx1 = document.getElementById('chart-technicians');
+  if (ctx1) {
+    if (chartTech) chartTech.destroy();
+    chartTech = new Chart(ctx1, { type:'bar', data:{ labels:techNames, datasets:[{
+      label:'Horas Realizadas', data:techHours,
+      backgroundColor:['rgba(245,166,35,0.7)','rgba(34,211,238,0.7)','rgba(139,92,246,0.7)','rgba(16,185,129,0.7)'],
+      borderRadius:6, borderSkipped:false
+    }]}, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{ x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#94a3b8'}}, y:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#94a3b8'}} }
+    }});
+  }
+
+  // Monthly evolution (last 6 months) — filtrado por visibilidade
+  const visibleIds_c = new Set(visibleTasks.map(t=>t.id));
+  const months=[]; const monthAvg=[];
+  for(let i=5;i>=0;i--){
+    const d=new Date(); d.setMonth(d.getMonth()-i);
+    const key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    months.push(d.toLocaleDateString('pt-BR',{month:'short',year:'2-digit'}));
+    const entries = db.auditLog.filter(l=>l.type==='progress' && l.timestamp.startsWith(key) && visibleIds_c.has(l.taskId));
+    monthAvg.push(entries.length ? Math.round(entries.reduce((a,l)=>a+l.data.pct,0)/entries.length) : null);
+  }
+  const ctx2 = document.getElementById('chart-monthly');
+  if (ctx2) {
+    if (chartMonthly) chartMonthly.destroy();
+    chartMonthly = new Chart(ctx2, { type:'line', data:{ labels:months, datasets:[{
+      label:'% Médio de Conclusão', data:monthAvg, fill:true,
+      borderColor:'var(--gold)', backgroundColor:'rgba(245,166,35,0.1)',
+      pointBackgroundColor:'var(--gold)', tension:0.4, spanGaps:true
+    }]}, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{ x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#94a3b8'}},
+        y:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#94a3b8'},min:0,max:100} }
+    }});
+  }
+
+  // Status donut — apenas tarefas visíveis
+  const sc={ nao_iniciado:0, em_andamento:0, concluido:0, pausado:0 };
+  visibleTasks.forEach(t=>{ sc[t.status]=(sc[t.status]||0)+1; });
+  const ctx3 = document.getElementById('chart-status');
+  if (ctx3) {
+    if (chartStatus) chartStatus.destroy();
+    chartStatus = new Chart(ctx3, { type:'doughnut', data:{
+      labels:['Não Iniciado','Em Andamento','Concluído','Pausado'],
+      datasets:[{ data:[sc.nao_iniciado,sc.em_andamento,sc.concluido,sc.pausado],
+        backgroundColor:['rgba(239,68,68,0.8)','rgba(245,166,35,0.8)','rgba(16,185,129,0.8)','rgba(139,92,246,0.8)'],
+        borderWidth:0, hoverOffset:6 }]
+    }, options:{ responsive:true, maintainAspectRatio:false, plugins:{
+      legend:{ position:'right', labels:{color:'#94a3b8',boxWidth:12,font:{size:11}} }
+    }}});
+  }
+}
+
+// ═══════════════════════════════════════════
+//  RENDER: TASKS PAGE
+// ═══════════════════════════════════════════
+function renderTasksPage() {
+  populateTechSelects();
+  const db = getDB();
+  const fTech   = document.getElementById('filter-tech')?.value   || '';
+  const fStatus = document.getElementById('filter-status')?.value || '';
+  const fCat    = document.getElementById('filter-cat')?.value    || '';
+  const fSearch = (document.getElementById('filter-search')?.value||'').toLowerCase();
+
+  let tasks = [...getVisibleTasks(db)].reverse().filter(t=>{
+    if (fTech   && t.technicianId !== fTech) return false;
+    if (fStatus && t.status !== fStatus) return false;
+    if (fCat    && t.category !== fCat) return false;
+    if (fSearch && !t.title.toLowerCase().includes(fSearch)) return false;
+    return true;
+  });
+
+  const tbody = document.getElementById('tasks-tbody');
+  if (!tbody) return;
+
+  if (!tasks.length) {
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text2)">Nenhuma atividade encontrada.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = tasks.map(t=>`
+    <tr>
+      <td>
+        <div style="font-weight:600;font-size:13px;max-width:220px">${t.title}</div>
+        ${priorityBadge(t.priority)}
+      </td>
+      <td>${catBadge(t.category)}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--orange));display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#0f1c2e;flex-shrink:0">${getInitials(getTechName(t.technicianId))}</div>
+          <span style="font-size:12px">${getTechName(t.technicianId).split(' ')[0]}</span>
+        </div>
+      </td>
+      <td style="color:var(--text2)">${t.estimatedHours}h</td>
+      <td style="color:var(--cyan)">${(t.realizedHours||0).toFixed(1)}h</td>
+      <td style="min-width:130px">
+        <div class="prog-label"><span></span><span style="font-weight:700;color:${pctColor(t.progress)}">${t.progress}%</span></div>
+        <div class="progress-wrap"><div class="progress-fill" style="width:${t.progress}%;background:${pctColor(t.progress)}"></div></div>
+      </td>
+      <td>${statusBadge(t.status)}</td>
+      <td style="color:var(--text2);font-size:12px">${t.deadline?fmtDateShort(t.deadline+'T00:00:00'):'—'}</td>
+      <td>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-ghost btn-icon btn-sm" title="Ver detalhes" onclick="viewTask('${t.id}')">🔍</button>
+          <button class="btn btn-primary btn-icon btn-sm" title="Atualizar progresso" onclick="openUpdateFor('${t.id}')">⚡</button>
+          <button class="btn btn-ghost btn-icon btn-sm" title="Reatribuir técnico" onclick="openReassign('${t.id}')">🔄</button>
+          ${isAdmin() ? `<button class="btn btn-danger btn-icon btn-sm" title="Excluir atividade" onclick="confirmDeleteTask('${t.id}','${t.title.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')">🗑️</button>` : ''}
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function openUpdateFor(taskId) {
+  const db = getDB();
+  const task = db.tasks.find(t=>t.id===taskId);
+  if (!task) return;
+  openModal('modal-update-progress');
+  setTimeout(()=>{
+    document.getElementById('up-tech').value = task.technicianId;
+    fillTasksByTech();
+    setTimeout(()=>{ document.getElementById('up-task').value = taskId; }, 50);
+  },100);
+}
+
+function viewTask(taskId) {
+  const db = getDB();
+  const t = db.tasks.find(x=>x.id===taskId);
+  if (!t) return;
+  document.getElementById('detail-title').textContent = t.title;
+  const occup = t.estimatedHours ? Math.min(100,Math.round((t.realizedHours||0)/t.estimatedHours*100)) : 0;
+  document.getElementById('detail-body').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px">
+      <div style="background:var(--navy3);border-radius:8px;padding:14px;text-align:center">
+        <div style="font-size:28px;font-weight:700;color:${pctColor(t.progress)}">${t.progress}%</div>
+        <div style="font-size:11px;color:var(--text2)">Conclusão</div>
+      </div>
+      <div style="background:var(--navy3);border-radius:8px;padding:14px;text-align:center">
+        <div style="font-size:28px;font-weight:700;color:var(--cyan)">${(t.realizedHours||0).toFixed(1)}h</div>
+        <div style="font-size:11px;color:var(--text2)">Horas Realizadas</div>
+      </div>
+      <div style="background:var(--navy3);border-radius:8px;padding:14px;text-align:center">
+        <div style="font-size:28px;font-weight:700;color:var(--text)">${t.estimatedHours}h</div>
+        <div style="font-size:11px;color:var(--text2)">Horas Estimadas</div>
+      </div>
+    </div>
+    <div style="margin-bottom:16px">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:6px">OCUPAÇÃO DE HORAS</div>
+      <div class="progress-wrap" style="height:10px">
+        <div class="progress-fill" style="width:${occup}%;background:${pctColor(occup)}"></div>
+      </div>
+      <div style="font-size:11px;color:var(--text2);margin-top:4px">${occup}% das horas estimadas utilizadas</div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap">
+      ${statusBadge(t.status)} ${priorityBadge(t.priority)} ${catBadge(t.category)}
+      <span class="badge badge-blue">👷 ${getTechName(t.technicianId)}</span>
+      ${t.deadline?`<span class="badge badge-orange">📅 Prazo: ${fmtDateShort(t.deadline+'T00:00:00')}</span>`:''}
+    </div>
+    ${t.description?`<div style="background:var(--navy3);border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;color:var(--text2)">${t.description}</div>`:''}
+    <div class="card-title" style="margin-bottom:12px">📜 Histórico de Progresso</div>
+    ${t.progressLog.length ? t.progressLog.slice().reverse().map((p,ri)=>{
+      const realIdx = t.progressLog.length - 1 - ri;
+      const session_ = getSession();
+      const ageMin = (Date.now() - new Date(p.date).getTime()) / 60000;
+      const canEdit = ageMin <= 30 && (
+        session_.role === 'admin' || session_.technicianId === t.technicianId
+      );
+      return `<div class="log-item">
+        <div class="log-dot" style="background:${pctColor(p.pct)}"></div>
+        <div class="log-content">
+          <div class="log-title" style="color:${pctColor(p.pct)};display:flex;justify-content:space-between;align-items:center">
+            <span>${p.pct}% concluído</span>
+            ${canEdit ? `<button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px" onclick="openEditProgress('${t.id}',${realIdx})">✏️ Editar</button>` : ''}
+          </div>
+          <div class="log-meta">${fmtDate(p.date)} · ${p.hoursWorked}h trabalhadas nesta sessão</div>
+          <div class="log-detail">${p.note}</div>
+        </div>
+      </div>`;
+    }).join('') : '<p style="color:var(--text2);font-size:13px">Nenhum progresso registrado ainda.</p>'}
+  `;
+  openModal('modal-task-detail');
+}
+
+// ═══════════════════════════════════════════
+//  RENDER: TECHNICIANS
+// ═══════════════════════════════════════════
+function renderTechnicians() {
+  const db = getDB();
+  const grid = document.getElementById('tech-cards-grid');
+  const hoursConf = document.getElementById('hours-config-list');
+  if (!grid) return;
+
+  if (!db.technicians.length) {
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="empty-icon">👷</div><p>Nenhum técnico cadastrado. Clique em "Novo Técnico" para adicionar.</p></div>`;
+    hoursConf.innerHTML = '';
+    return;
+  }
+
+  grid.innerHTML = db.technicians.map(tech=>{
+    const myTasks = db.tasks.filter(t=>t.technicianId===tech.id);
+    const concluded = myTasks.filter(t=>t.status==='concluido').length;
+    const avgPct = myTasks.length ? Math.round(myTasks.reduce((a,t)=>a+t.progress,0)/myTasks.length) : 0;
+    const realH = myTasks.reduce((a,t)=>a+(t.realizedHours||0),0);
+    const occup = tech.monthlyHours ? Math.min(100,Math.round(realH/tech.monthlyHours*100)) : 0;
+    return `
+      <div class="tech-card">
+        <div style="display:flex;align-items:center;gap:14px">
+          <div class="tech-avatar">${getInitials(tech.name)}</div>
+          <div class="tech-info">
+            <h4>${tech.name}</h4>
+            <p>${tech.role}</p>
+            ${tech.shift?`<p style="margin-top:2px;font-size:11px">🏭 ${tech.shift}</p>`:''}
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center">
+          <div style="background:var(--navy3);border-radius:8px;padding:10px">
+            <div style="font-size:20px;font-weight:700;color:var(--gold)">${myTasks.length}</div>
+            <div style="font-size:10px;color:var(--text2)">Atividades</div>
+          </div>
+          <div style="background:var(--navy3);border-radius:8px;padding:10px">
+            <div style="font-size:20px;font-weight:700;color:var(--green)">${concluded}</div>
+            <div style="font-size:10px;color:var(--text2)">Concluídas</div>
+          </div>
+          <div style="background:var(--navy3);border-radius:8px;padding:10px">
+            <div style="font-size:20px;font-weight:700;color:${pctColor(avgPct)}">${avgPct}%</div>
+            <div style="font-size:10px;color:var(--text2)">Média</div>
+          </div>
+        </div>
+        <div>
+          <div class="hours-bar-label">
+            <span>Ocupação de Horas</span>
+            <span style="color:${pctColor(occup)};font-weight:700">${realH.toFixed(1)}h / ${tech.monthlyHours}h (${occup}%)</span>
+          </div>
+          <div class="progress-wrap">
+            <div class="progress-fill" style="width:${occup}%;background:${pctColor(occup)}"></div>
+          </div>
+        </div>
+        ${tech.registration?`<div style="font-size:11px;color:var(--text2)">🪪 ${tech.registration} ${tech.email?'· 📧 '+tech.email:''}</div>`:''}
+        <div style="display:flex;gap:8px;margin-top:4px">
+          <button class="btn btn-ghost btn-sm" style="flex:1" onclick="openEditTech('${tech.id}')">✏️ Editar</button>
+          <button class="btn btn-danger btn-sm" onclick="confirmDeleteTech('${tech.id}','${tech.name.replace(/'/g,"\\'")}')">🗑️ Excluir</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Hours config
+  const curMonth = new Date().toISOString().slice(0,7);
+  hoursConf.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px">
+    ${db.technicians.map(tech=>`
+      <div style="background:var(--navy3);border-radius:8px;padding:14px">
+        <div style="font-weight:600;margin-bottom:10px">${tech.name.split(' ')[0]}</div>
+        <div class="form-group" style="margin-bottom:0">
+          <label>Horas Disponíveis — Mês Atual</label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="number" value="${(db.monthlyHours[tech.id]||{})[curMonth]||tech.monthlyHours||176}"
+              id="mh-${tech.id}" style="background:var(--navy2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:7px 10px;font-size:13px;width:80px;outline:none">
+            <button class="btn btn-ghost btn-sm" onclick="saveMonthlyHours('${tech.id}')">Salvar</button>
+          </div>
+        </div>
+      </div>
+    `).join('')}
+    </div>
+  `;
+}
+
+function suggestPriority() {
+  const deadline = document.getElementById('nt-deadline').value;
+  const hint     = document.getElementById('nt-priority-hint');
+  const sel      = document.getElementById('nt-priority');
+  if (!deadline) { hint.style.display = 'none'; return; }
+  const days = Math.ceil((new Date(deadline) - new Date()) / (1000*60*60*24));
+  let suggested, label;
+  if (days <= 7)       { suggested = 'alta';  label = `🔴 Alta — prazo em ${days} dia(s)`; }
+  else if (days <= 30) { suggested = 'media'; label = `🟡 Média — prazo em ${days} dias`; }
+  else                 { suggested = 'baixa'; label = `🟢 Baixa — prazo em ${days} dias`; }
+  sel.value           = suggested;
+  hint.textContent    = `💡 Sugestão automática: ${label}`;
+  hint.style.display  = 'block';
+}
+
+function openEditProgress(taskId, entryIndex) {
+  const db   = getDB();
+  const task = db.tasks.find(t => t.id === taskId);
+  if (!task) return;
+  const entry = task.progressLog[entryIndex];
+  if (!entry) return;
+  const ageMin = (Date.now() - new Date(entry.date).getTime()) / 60000;
+  if (ageMin > 30) { toast('Prazo de edição de 30 minutos expirado.', '⏱️'); return; }
+  document.getElementById('ep-task-id').value    = taskId;
+  document.getElementById('ep-entry-index').value = entryIndex;
+  document.getElementById('ep-pct').value          = entry.pct;
+  document.getElementById('ep-pct-val').textContent = entry.pct + '%';
+  document.getElementById('ep-hours').value        = entry.hoursWorked;
+  document.getElementById('ep-note').value         = entry.note;
+  openModal('modal-edit-progress');
+}
+
+function saveEditProgress() {
+  const taskId = document.getElementById('ep-task-id').value;
+  const idx    = parseInt(document.getElementById('ep-entry-index').value);
+  const note   = document.getElementById('ep-note').value.trim();
+  if (!note) { toast('Descreva o que foi realizado!', '⚠️'); return; }
+  const db   = getDB();
+  const task = db.tasks.find(t => t.id === taskId);
+  if (!task || !task.progressLog[idx]) return;
+  const ageMin = (Date.now() - new Date(task.progressLog[idx].date).getTime()) / 60000;
+  if (ageMin > 30) { toast('Prazo de edição de 30 minutos expirado.', '⏱️'); closeModal('modal-edit-progress'); return; }
+  const oldEntry = { ...task.progressLog[idx] };
+  task.progressLog[idx].pct         = parseInt(document.getElementById('ep-pct').value);
+  task.progressLog[idx].hoursWorked = parseFloat(document.getElementById('ep-hours').value) || 0;
+  task.progressLog[idx].note        = note;
+  task.progressLog[idx].editedAt    = now();
+  // Recalcula horas realizadas totais
+  task.realizedHours = task.progressLog.reduce((a, p) => a + (p.hoursWorked || 0), 0);
+  // Atualiza progresso geral com o último valor
+  task.progress = task.progressLog[task.progressLog.length - 1].pct;
+  db.auditLog.push({
+    id: uid(), type: 'progress_edited', timestamp: now(),
+    taskId: task.id, taskTitle: task.title, technicianId: task.technicianId,
+    data: { prev: oldEntry, next: task.progressLog[idx] }
+  });
+  saveDB(db);
+  closeModal('modal-edit-progress');
+  closeModal('modal-task-detail');
+  toast('Atualização editada com sucesso!');
+  renderTasksPage();
+}
+
+function openReassign(taskId) {
+  const db = getDB();
+  const task = db.tasks.find(t=>t.id===taskId);
+  if (!task) return;
+  document.getElementById('reassign-task-id').value = taskId;
+  document.getElementById('reassign-task-label').textContent = '📋 ' + task.title;
+  document.getElementById('reassign-current-tech').value = getTechName(task.technicianId);
+  const sel = document.getElementById('reassign-new-tech');
+  sel.innerHTML = db.technicians
+    .filter(t=>t.id!==task.technicianId)
+    .map(t=>`<option value="${t.id}">${t.name}</option>`).join('');
+  if (!sel.options.length) {
+    toast('Não há outros técnicos cadastrados para reatribuir.','⚠️'); return;
+  }
+  document.getElementById('reassign-reason').value = '';
+  openModal('modal-reassign');
+}
+
+function saveReassign() {
+  const taskId    = document.getElementById('reassign-task-id').value;
+  const newTechId = document.getElementById('reassign-new-tech').value;
+  const reason    = document.getElementById('reassign-reason').value.trim();
+  if (!reason) { toast('Informe o motivo da reatribuição!','⚠️'); return; }
+  const db = getDB();
+  const task = db.tasks.find(t=>t.id===taskId);
+  if (!task) return;
+  const prevTechId = task.technicianId;
+  task.technicianId = newTechId;
+  task.progressLog.push({
+    date: now(), pct: task.progress,
+    note: `🔄 Reatribuído de ${getTechName(prevTechId)} para ${getTechName(newTechId)}. Motivo: ${reason}`,
+    hoursWorked: 0
+  });
+  db.auditLog.push({
+    id: uid(), type: 'task_reassigned', timestamp: now(),
+    taskId: task.id, taskTitle: task.title,
+    technicianId: newTechId,
+    data: { prevTechId, prevTechName: getTechName(prevTechId), newTechName: getTechName(newTechId), reason }
+  });
+  saveDB(db);
+  closeModal('modal-reassign');
+  toast(`Atividade reatribuída para ${getTechName(newTechId)}!`);
+  renderTasksPage();
+}
+
+function openEditTech(techId) {
+  const db = getDB();
+  const tech = db.technicians.find(t=>t.id===techId);
+  if (!tech) return;
+  document.getElementById('edit-tech-id').value    = tech.id;
+  document.getElementById('edit-tech-name').value  = tech.name;
+  document.getElementById('edit-tech-reg').value   = tech.registration || '';
+  document.getElementById('edit-tech-role').value  = tech.role || '';
+  document.getElementById('edit-tech-shift').value = tech.shift || '';
+  document.getElementById('edit-tech-hours').value = tech.monthlyHours || 176;
+  document.getElementById('edit-tech-email').value = tech.email || '';
+  openModal('modal-edit-tech');
+}
+
+function saveEditTech() {
+  const id   = document.getElementById('edit-tech-id').value;
+  const name = document.getElementById('edit-tech-name').value.trim();
+  const hours = parseInt(document.getElementById('edit-tech-hours').value);
+  if (!name)  { toast('Preencha o nome!','⚠️'); return; }
+  if (!hours) { toast('Informe as horas mensais!','⚠️'); return; }
+
+  const db = getDB();
+  const tech = db.technicians.find(t=>t.id===id);
+  if (!tech) return;
+
+  const prev = { name: tech.name, role: tech.role, shift: tech.shift, hours: tech.monthlyHours };
+  tech.name         = name;
+  tech.registration = document.getElementById('edit-tech-reg').value;
+  tech.role         = document.getElementById('edit-tech-role').value;
+  tech.shift        = document.getElementById('edit-tech-shift').value;
+  tech.monthlyHours = hours;
+  tech.email        = document.getElementById('edit-tech-email').value;
+
+  db.auditLog.push({ id:uid(), type:'tech_updated', timestamp:now(), technicianId:id,
+    data:{ prev, next:{ name:tech.name, role:tech.role, shift:tech.shift, hours } } });
+  saveDB(db);
+  closeModal('modal-edit-tech');
+  toast('Técnico atualizado com sucesso!');
+  renderTechnicians();
+  populateTechSelects();
+}
+
+function confirmDeleteTech(techId, techName) {
+  document.getElementById('delete-tech-id').value = techId;
+  document.getElementById('delete-tech-name-label').textContent = techName;
+  openModal('modal-confirm-delete-tech');
+}
+
+function deleteTech() {
+  const id = document.getElementById('delete-tech-id').value;
+  const db = getDB();
+  const tech = db.technicians.find(t=>t.id===id);
+  if (!tech) return;
+  db.auditLog.push({ id:uid(), type:'tech_deleted', timestamp:now(), technicianId:id,
+    data:{ name:tech.name } });
+  db.technicians = db.technicians.filter(t=>t.id!==id);
+  saveDB(db);
+  closeModal('modal-confirm-delete-tech');
+  toast(`Técnico "${tech.name}" excluído.`, '🗑️');
+  renderTechnicians();
+  populateTechSelects();
+}
+
+function saveMonthlyHours(techId) {
+  const db = getDB();
+  const val = parseInt(document.getElementById('mh-'+techId)?.value);
+  if (!val || val <= 0) { toast('Valor inválido!','⚠️'); return; }
+  const curMonth = new Date().toISOString().slice(0,7);
+  if (!db.monthlyHours[techId]) db.monthlyHours[techId] = {};
+  db.monthlyHours[techId][curMonth] = val;
+  // update tech default too
+  const tech = db.technicians.find(t=>t.id===techId);
+  if (tech) tech.monthlyHours = val;
+  db.auditLog.push({ id:uid(), type:'hours_updated', timestamp:now(), technicianId:techId, data:{ month:curMonth, hours:val } });
+  saveDB(db);
+  toast(`Horas de ${getTechName(techId).split(' ')[0]} atualizadas!`);
+  renderTechnicians();
+}
+
+// ═══════════════════════════════════════════
+//  RENDER: PRODUCTIVITY
+// ═══════════════════════════════════════════
+let productChart = null;
+let prodTab = 'diario';
+
+function setProductTab(tab, el) {
+  prodTab = tab;
+  document.querySelectorAll('#page-productivity .tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderProductivity(tab);
+}
+
+function renderProductivity(tab) {
+  const db = getDB();
+  const container = document.getElementById('productivity-content');
+  if (!container) return;
+
+  const now_ = new Date();
+
+  // Group audit log entries
+  function groupBy(logs, keyFn) {
+    const map = {};
+    logs.forEach(l=>{ const k=keyFn(l); if(!map[k]) map[k]=[]; map[k].push(l); });
+    return map;
+  }
+
+  const session      = getSession();
+  const visibleTasks = getVisibleTasks(db);
+  const visibleIds   = new Set(visibleTasks.map(t=>t.id));
+  const progressLogs = db.auditLog.filter(l =>
+    l.type === 'progress' && visibleIds.has(l.taskId)
+  );
+
+  let labels=[], dataHours=[], dataPct=[], tableRows=[];
+
+  if (tab==='diario') {
+    for (let i=6;i>=0;i--) {
+      const d=new Date(now_); d.setDate(d.getDate()-i);
+      const key=d.toISOString().split('T')[0];
+      labels.push(d.toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit'}));
+      const entries=progressLogs.filter(l=>l.timestamp.startsWith(key));
+      dataHours.push(entries.reduce((a,l)=>a+(l.data.hoursWorked||0),0));
+      dataPct.push(entries.length ? Math.round(entries.reduce((a,l)=>a+l.data.pct,0)/entries.length) : 0);
+      entries.forEach(l=>tableRows.push({...l,dayKey:key}));
+    }
+  } else if (tab==='semanal') {
+    for (let i=3;i>=0;i--) {
+      const d=new Date(now_); d.setDate(d.getDate()-i*7);
+      const weekStart=new Date(d); weekStart.setDate(d.getDate()-d.getDay());
+      const weekEnd=new Date(weekStart); weekEnd.setDate(weekStart.getDate()+6);
+      labels.push(`S. ${weekStart.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})}`);
+      const entries=progressLogs.filter(l=>{const ld=new Date(l.timestamp);return ld>=weekStart&&ld<=weekEnd;});
+      dataHours.push(entries.reduce((a,l)=>a+(l.data.hoursWorked||0),0));
+      dataPct.push(entries.length ? Math.round(entries.reduce((a,l)=>a+l.data.pct,0)/entries.length) : 0);
+      entries.forEach(l=>tableRows.push(l));
+    }
+  } else {
+    for (let i=5;i>=0;i--) {
+      const d=new Date(now_); d.setMonth(d.getMonth()-i);
+      const key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+      labels.push(d.toLocaleDateString('pt-BR',{month:'short',year:'2-digit'}));
+      const entries=progressLogs.filter(l=>l.timestamp.startsWith(key));
+      dataHours.push(entries.reduce((a,l)=>a+(l.data.hoursWorked||0),0));
+      dataPct.push(entries.length ? Math.round(entries.reduce((a,l)=>a+l.data.pct,0)/entries.length) : 0);
+      entries.forEach(l=>tableRows.push(l));
+    }
+  }
+
+  // Per-technician summary — filtrado por visibilidade
+  const visibleTechs = session.role === 'admin'
+    ? db.technicians
+    : db.technicians.filter(t => t.id === session.technicianId);
+
+  const techSummary = visibleTechs.map(tech=>{
+    const myLogs = progressLogs.filter(l=>l.technicianId===tech.id);
+    const totalH = myLogs.reduce((a,l)=>a+(l.data.hoursWorked||0),0);
+    const myTasks = db.tasks.filter(t=>t.technicianId===tech.id);
+    const avgPct = myTasks.length?Math.round(myTasks.reduce((a,t)=>a+t.progress,0)/myTasks.length):0;
+    const concluded = myTasks.filter(t=>t.status==='concluido').length;
+    return { tech, totalH, avgPct, concluded, total:myTasks.length };
+  });
+
+  container.innerHTML = `
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">⏱️ Horas Registradas</div>
+        <div class="chart-box"><canvas id="prod-chart-hours"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">📊 % Médio de Conclusão</div>
+        <div class="chart-box"><canvas id="prod-chart-pct"></canvas></div>
+      </div>
+    </div>
+    <div class="card mt">
+      <div class="card-title">👷 Desempenho por Técnico</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Técnico</th><th>Atividades</th><th>Concluídas</th><th>🔴 Alta</th><th>🟡 Média</th><th>🟢 Baixa</th><th>Horas Realizadas</th><th>Ocupação</th><th>Progresso Médio</th></tr></thead>
+          <tbody>
+          ${techSummary.map(s=>{
+            const occ=s.tech.monthlyHours?Math.min(100,Math.round(s.totalH/s.tech.monthlyHours*100)):0;
+            const myTasks=db.tasks.filter(t=>t.technicianId===s.tech.id);
+            const pAlta=myTasks.filter(t=>t.priority==='alta'&&t.status!=='concluido').length;
+            const pMedia=myTasks.filter(t=>t.priority==='media'&&t.status!=='concluido').length;
+            const pBaixa=myTasks.filter(t=>t.priority==='baixa'&&t.status!=='concluido').length;
+            return `<tr>
+              <td><div style="display:flex;align-items:center;gap:8px">
+                <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--orange));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#0f1c2e">${getInitials(s.tech.name)}</div>
+                <div><div style="font-weight:600">${s.tech.name}</div><div style="font-size:11px;color:var(--text2)">${s.tech.role}</div></div>
+              </div></td>
+              <td style="text-align:center">${s.total}</td>
+              <td style="text-align:center"><span style="color:var(--green);font-weight:700">${s.concluded}</span></td>
+              <td style="text-align:center"><span style="font-weight:700;color:${pAlta?'var(--red)':'var(--text2)'}">${pAlta}</span></td>
+              <td style="text-align:center"><span style="font-weight:700;color:${pMedia?'var(--gold)':'var(--text2)'}">${pMedia}</span></td>
+              <td style="text-align:center"><span style="font-weight:700;color:${pBaixa?'var(--green)':'var(--text2)'}">${pBaixa}</span></td>
+              <td style="text-align:center;color:var(--cyan)">${s.totalH.toFixed(1)}h</td>
+              <td><div style="min-width:100px">
+                <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px"><span></span><span style="color:${pctColor(occ)}">${occ}%</span></div>
+                <div class="progress-wrap"><div class="progress-fill" style="width:${occ}%;background:${pctColor(occ)}"></div></div>
+              </div></td>
+              <td><span style="font-size:16px;font-weight:700;color:${pctColor(s.avgPct)}">${s.avgPct}%</span></td>
+            </tr>`;
+          }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  // Draw charts
+  setTimeout(()=>{
+    const c1=document.getElementById('prod-chart-hours');
+    const c2=document.getElementById('prod-chart-pct');
+    if(c1) new Chart(c1,{type:'bar',data:{labels,datasets:[{label:'Horas',data:dataHours,backgroundColor:'rgba(34,211,238,0.7)',borderRadius:6,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#94a3b8'}},y:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#94a3b8'}}}}});
+    if(c2) new Chart(c2,{type:'line',data:{labels,datasets:[{label:'%',data:dataPct,fill:true,borderColor:'var(--green)',backgroundColor:'rgba(16,185,129,0.1)',pointBackgroundColor:'var(--green)',tension:0.4,spanGaps:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#94a3b8'}},y:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#94a3b8'},min:0,max:100}}}});
+  },100);
+}
+
+// ═══════════════════════════════════════════
+//  RENDER: HISTORY
+// ═══════════════════════════════════════════
+function renderHistoryPage() {
+  populateTechSelects();
+  const db = getDB();
+  const fTech = document.getElementById('hist-filter-tech')?.value || '';
+  const fType = document.getElementById('hist-filter-type')?.value || '';
+  const fDate = document.getElementById('hist-filter-date')?.value || '';
+
+  const session_h    = getSession();
+  const visibleIds_h = new Set(getVisibleTasks(db).map(t=>t.id));
+
+  let logs = [...db.auditLog].reverse().filter(l=>{
+    // Técnico só vê seus próprios logs
+    if (session_h.role !== 'admin') {
+      if (l.technicianId && l.technicianId !== session_h.technicianId) return false;
+      if (l.taskId && !visibleIds_h.has(l.taskId)) return false;
+    }
+    if (fTech && l.technicianId !== fTech) return false;
+    if (fType && l.type !== fType) return false;
+    if (fDate && !l.timestamp.startsWith(fDate)) return false;
+    return true;
+  });
+
+  const icons = { progress:'📊', task_created:'➕', task_updated:'✏️', tech_created:'👷', hours_updated:'⏱️' };
+  const colors = { progress:'var(--green)', task_created:'var(--gold)', task_updated:'var(--cyan)', tech_created:'var(--purple)', hours_updated:'var(--orange)' };
+  const typeLabels = { progress:'Progresso', task_created:'Tarefa Criada', task_updated:'Tarefa Atualizada', tech_created:'Técnico Cadastrado', hours_updated:'Horas Atualizadas' };
+
+  const list = document.getElementById('history-list');
+  if (!list) return;
+
+  if (!logs.length) {
+    list.innerHTML = '<div class="empty"><div class="empty-icon">📭</div><p>Nenhum registro encontrado.</p></div>';
+    return;
+  }
+
+  list.innerHTML = logs.map(l=>`
+    <div class="log-item">
+      <div class="log-dot" style="background:${colors[l.type]||'var(--text2)'}"></div>
+      <div class="log-content">
+        <div class="log-title">${icons[l.type]||'·'} ${typeLabels[l.type]||l.type}
+          ${l.taskTitle?`<span style="color:var(--text2);font-weight:400"> — ${l.taskTitle}</span>`:''}
+        </div>
+        <div class="log-meta">
+          ${fmtDate(l.timestamp)}
+          ${l.technicianId?` · 👷 ${getTechName(l.technicianId)}`:''}
+        </div>
+        ${l.type==='progress'?`
+          <div class="log-detail">
+            <strong>Progresso:</strong> ${l.data.prevPct}% → <strong style="color:${pctColor(l.data.pct)}">${l.data.pct}%</strong>
+            · ${l.data.hoursWorked}h registradas<br>
+            <em>${l.data.note}</em>
+          </div>`:''}
+        ${l.type==='task_created'?`<div class="log-detail">Título: <strong>${l.data.title}</strong> · ${l.data.hours}h estimadas · Progresso inicial: ${l.data.pct}%</div>`:''}
+        ${l.type==='tech_created'?`<div class="log-detail">Técnico: <strong>${l.data.name}</strong> ${l.data.hours?`· ${l.data.hours}h/mês`:''}</div>`:''}
+        ${l.type==='hours_updated'?`<div class="log-detail">Mês: ${l.data.month} · Horas: <strong>${l.data.hours}h</strong></div>`:''}
+      </div>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════
+//  RENDER: REPORTS
+// ═══════════════════════════════════════════
+function renderReports() {
+  populateTechSelects();
+  const db = getDB();
+  const tasks = db.tasks;
+  const total = tasks.length;
+  const concluded = tasks.filter(t=>t.status==='concluido').length;
+  const inProg = tasks.filter(t=>t.status==='em_andamento').length;
+  const avgPct = total ? Math.round(tasks.reduce((a,t)=>a+t.progress,0)/total) : 0;
+  const totalH = tasks.reduce((a,t)=>a+(t.realizedHours||0),0);
+
+  const el = document.getElementById('quick-report-summary');
+  if (!el) return;
+  el.innerHTML = `
+    <div style="display:grid;gap:12px">
+      ${[
+        ['Total de Atividades',total,'var(--gold)','📋'],
+        ['Concluídas',`${concluded} (${total?Math.round(concluded/total*100):0}%)`,'var(--green)','✅'],
+        ['Em Andamento',inProg,'var(--orange)','🔄'],
+        ['Progresso Médio Geral',avgPct+'%',pctColor(avgPct),'📊'],
+        ['Total de Horas Realizadas',totalH.toFixed(1)+'h','var(--cyan)','⏱️'],
+        ['Técnicos Ativos',db.technicians.length,'var(--purple)','👷'],
+      ].map(([label,val,color,icon])=>`
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--navy3);border-radius:8px">
+          <span style="font-size:13px;color:var(--text2)">${icon} ${label}</span>
+          <span style="font-size:15px;font-weight:700;color:${color}">${val}</span>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function generateReport() {
+  const db = getDB();
+  const period = document.getElementById('report-period').value;
+  const techId = document.getElementById('report-tech').value;
+  const periodLabel = { mes_atual:'Mês Atual', trimestre:'Trimestre', semestre:'Semestre', anual:'Anual' }[period];
+
+  const tasks = techId ? db.tasks.filter(t=>t.technicianId===techId) : db.tasks;
+  const techs = techId ? db.technicians.filter(t=>t.id===techId) : db.technicians;
+  const total=tasks.length, concluded=tasks.filter(t=>t.status==='concluido').length;
+  const inProg=tasks.filter(t=>t.status==='em_andamento').length;
+  const avgPct=total?Math.round(tasks.reduce((a,t)=>a+t.progress,0)/total):0;
+  const totalH=tasks.reduce((a,t)=>a+(t.realizedHours||0),0);
+  const totalEst=tasks.reduce((a,t)=>a+(t.estimatedHours||0),0);
+
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="UTF-8">
+<title>Relatório TST — ${periodLabel}</title>
+<style>
+  body{font-family:'Segoe UI',sans-serif;background:#f8fafc;color:#1e293b;margin:0;padding:0}
+  .header{background:linear-gradient(135deg,#0f1c2e,#1e2d42);color:white;padding:40px 48px}
+  .header h1{font-size:28px;margin:0 0 8px;font-weight:800}
+  .header p{opacity:.7;font-size:14px}
+  .content{max-width:900px;margin:0 auto;padding:32px 24px}
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:24px 0}
+  .kpi{background:white;border-radius:10px;padding:20px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06);border-top:4px solid}
+  .kpi .v{font-size:32px;font-weight:800;margin:4px 0}
+  .kpi .l{font-size:12px;color:#64748b}
+  h2{font-size:18px;font-weight:700;margin:32px 0 12px;padding-bottom:8px;border-bottom:2px solid #e2e8f0}
+  table{width:100%;border-collapse:collapse;background:white;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+  th{background:#f1f5f9;padding:10px 14px;text-align:left;font-size:11px;text-transform:uppercase;color:#64748b;letter-spacing:.5px}
+  td{padding:12px 14px;border-bottom:1px solid #f1f5f9;font-size:13px}
+  .badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600}
+  .footer{text-align:center;padding:32px;color:#94a3b8;font-size:12px;border-top:1px solid #e2e8f0;margin-top:40px}
+</style></head><body>
+<div class="header">
+  <h1>🦺 Relatório de Gestão — Segurança do Trabalho</h1>
+  <p>Período: ${periodLabel} · Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})} · ${techId?'Técnico: '+getTechName(techId):'Toda a Equipe'}</p>
+</div>
+<div class="content">
+  <div class="kpis">
+    <div class="kpi" style="border-color:#f5a623"><div class="v" style="color:#f5a623">${total}</div><div class="l">Total de Atividades</div></div>
+    <div class="kpi" style="border-color:#10b981"><div class="v" style="color:#10b981">${concluded}</div><div class="l">Concluídas (${total?Math.round(concluded/total*100):0}%)</div></div>
+    <div class="kpi" style="border-color:#22d3ee"><div class="v" style="color:#22d3ee">${avgPct}%</div><div class="l">Progresso Médio</div></div>
+    <div class="kpi" style="border-color:#8b5cf6"><div class="v" style="color:#8b5cf6">${totalH.toFixed(1)}h</div><div class="l">Horas Realizadas</div></div>
+    <div class="kpi" style="border-color:#f97316"><div class="v" style="color:#f97316">${totalEst}h</div><div class="l">Horas Estimadas</div></div>
+    <div class="kpi" style="border-color:#ef4444"><div class="v" style="color:#ef4444">${inProg}</div><div class="l">Em Andamento</div></div>
+  </div>
+  <h2>📋 Atividades</h2>
+  <table><thead><tr><th>Atividade</th><th>Categoria</th><th>Técnico</th><th>Est. (h)</th><th>Real. (h)</th><th>Progresso</th><th>Status</th></tr></thead>
+  <tbody>${tasks.map(t=>`<tr>
+    <td><strong>${t.title}</strong></td>
+    <td>${t.category}</td>
+    <td>${getTechName(t.technicianId)}</td>
+    <td>${t.estimatedHours}</td>
+    <td>${(t.realizedHours||0).toFixed(1)}</td>
+    <td><div style="background:#e2e8f0;border-radius:99px;height:8px;overflow:hidden"><div style="width:${t.progress}%;height:100%;background:${t.progress>=80?'#10b981':t.progress>=50?'#f5a623':'#ef4444'}"></div></div><small>${t.progress}%</small></td>
+    <td><span class="badge" style="background:${t.status==='concluido'?'#dcfce7':t.status==='em_andamento'?'#fef9c3':'#fee2e2'};color:${t.status==='concluido'?'#166534':t.status==='em_andamento'?'#854d0e':'#991b1b'}">${{nao_iniciado:'Não Iniciado',em_andamento:'Em Andamento',concluido:'Concluído',pausado:'Pausado'}[t.status]}</span></td>
+  </tr>`).join('')}</tbody></table>
+  <h2>👷 Desempenho por Técnico</h2>
+  <table><thead><tr><th>Técnico</th><th>Atividades</th><th>Concluídas</th><th>Horas Realizadas</th><th>Horas Disponíveis</th><th>Ocupação</th><th>Progresso Médio</th></tr></thead>
+  <tbody>${techs.map(tech=>{
+    const mt=db.tasks.filter(t=>t.technicianId===tech.id);
+    const mc=mt.filter(t=>t.status==='concluido').length;
+    const mh=mt.reduce((a,t)=>a+(t.realizedHours||0),0);
+    const mp=mt.length?Math.round(mt.reduce((a,t)=>a+t.progress,0)/mt.length):0;
+    const oc=tech.monthlyHours?Math.min(100,Math.round(mh/tech.monthlyHours*100)):0;
+    return `<tr><td><strong>${tech.name}</strong><br><small style="color:#64748b">${tech.role}</small></td>
+      <td>${mt.length}</td><td>${mc}</td><td>${mh.toFixed(1)}h</td><td>${tech.monthlyHours}h</td>
+      <td>${oc}%</td><td><strong>${mp}%</strong></td></tr>`;
+  }).join('')}</tbody></table>
+</div>
+<div class="footer">TST Diary — Sistema de Gestão de Segurança do Trabalho · ${new Date().getFullYear()}</div>
+</body></html>`;
+
+  const blob = new Blob([html],{type:'text/html'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download=`Relatorio_TST_${period}_${new Date().toISOString().split('T')[0]}.html`;
+  a.click(); URL.revokeObjectURL(url);
+  toast('Relatório gerado com sucesso!','📥');
+}
+
+// ═══════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════
+async function init() {
+  // Date display
+  const now_ = new Date();
+  document.getElementById('top-date').textContent = now_.toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
+
+  // Sincroniza com Supabase (se configurado)
+  if (IS_SUPABASE) {
+    await fetchFromServer();
+  } else {
+    setSyncStatus('local');
+  }
+
+  // Dados demo só em modo local (sem Supabase configurado)
+  if (!IS_SUPABASE) seedIfEmpty();
+
+  // Garante usuário admin
+  const db = getDB();
+  if (!IS_SUPABASE) {
+    // Modo local: sempre garante admin
+    ensureAdminUser(db);
+    localStorage.setItem(DB_KEY, JSON.stringify(db));
+  } else if (!db.users || db.users.length === 0) {
+    // Supabase configurado mas banco vazio: primeira execução
+    ensureAdminUser(db);
+    localStorage.setItem(DB_KEY, JSON.stringify(db));
+    await pushToServer(db);
+  }
+
+  checkBackupReminder();
+
+  // Verifica sessão existente
+  const session = getSession();
+  if (session) {
+    // Revalida: usuário ainda existe no banco?
+    const freshDB = getDB();
+    const userStillExists = freshDB.users && freshDB.users.find(u => u.id === session.id);
+    if (!userStillExists) {
+      clearSession();
+      toast('Sua sessão expirou. Faça login novamente.', '⚠️');
+      return;
+    }
+    document.getElementById('login-screen').classList.add('hidden');
+    applyRoleUI();
+    populateTechSelects();
+    renderDashboard();
+    if (session.role !== 'admin' && !session.technicianId) {
+      setTimeout(() => toast('⚠️ Seu usuário não está vinculado a nenhum técnico. Solicite ao administrador.', '⚠️'), 1500);
+    }
+  }
+}
+
+init();
+</script>
+</body>
+</html>
