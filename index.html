@@ -386,11 +386,13 @@
   </div>
 
   <div class="sidebar-footer">
-    <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-bottom:6px;font-size:11px" onclick="exportBackup()">💾 Exportar Backup</button>
-    <label class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;font-size:11px;cursor:pointer">
-      📂 Importar Backup
-      <input type="file" id="import-file" accept=".json" style="display:none" onchange="importBackup(event)">
-    </label>
+    <div id="sidebar-backup-btns">
+      <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-bottom:6px;font-size:11px" onclick="exportBackup()">💾 Exportar Backup</button>
+      <label class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;font-size:11px;cursor:pointer">
+        📂 Importar Backup
+        <input type="file" id="import-file" accept=".json" style="display:none" onchange="importBackup(event)">
+      </label>
+    </div>
     <div style="margin-top:8px">v1.0 · TST Diary</div>
   </div>
 </nav>
@@ -1249,13 +1251,20 @@ function applyRoleUI() {
   const rb = document.getElementById('topbar-role-badge');
   rb.textContent = session.role === 'admin' ? 'Admin' : 'Técnico';
   rb.className = 'role-badge ' + (session.role === 'admin' ? 'role-admin' : 'role-tecnico');
-  // Show admin nav items
+  // Mostra/oculta elementos exclusivos do admin
+  const adminDisplay = session.role === 'admin';
   document.querySelectorAll('.admin-only').forEach(el => {
-    el.style.display = session.role === 'admin' ? 'flex' : 'none';
+    el.style.display = adminDisplay ? 'flex' : 'none';
   });
   document.querySelectorAll('.admin-only-block').forEach(el => {
-    el.style.display = session.role === 'admin' ? 'block' : 'none';
+    el.style.display = adminDisplay ? 'block' : 'none';
   });
+  // Backup buttons — somente admin
+  const backupBtns = document.getElementById('sidebar-backup-btns');
+  if (backupBtns) backupBtns.style.display = adminDisplay ? 'block' : 'none';
+  // Banner de backup — somente admin
+  const banner = document.getElementById('backup-banner');
+  if (banner && !adminDisplay) banner.style.display = 'none';
 }
 
 // ── USER MANAGEMENT ──
@@ -1565,6 +1574,11 @@ function uid() { return Date.now().toString(36) + Math.random().toString(36).sli
 function now()  { return new Date().toISOString(); }
 function fmtDate(iso) {
   if (!iso) return '—';
+  // Entradas antigas gravadas como meia-noite UTC (bug de fuso) — exibe só a data
+  if (iso.includes('T00:00:00')) {
+    const [y,m,d] = iso.split('T')[0].split('-');
+    return `${d}/${m}/${y}`;
+  }
   const d = new Date(iso);
   return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
 }
